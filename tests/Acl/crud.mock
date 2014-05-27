@@ -1,0 +1,46 @@
+namespace Test\Controllers\Frontend;
+
+/**
+ * Class ExampleController
+ *
+ * @ACL(name="mvc:text:Frontend\Example", description="Example crud controller")
+ * @package Test\Controllers\Frontend
+ */
+class ExampleController extends \Vegas\Mvc\Controller\Crud
+{
+    /**
+     * @ACL(name="index", description="Index action")
+     */
+    public function indexAction()
+    {
+        echo 'INDEX ACTION';
+    }
+    /**
+     * @ACL(name="show", description="Show action")
+     */
+    public function showAction()
+    {
+        echo 'SHOW ACTION';
+    }
+    /**
+     * @ACL(name="list", description="List action")
+     */
+    public function listAction()
+    {
+        echo 'LIST ACTION';
+    }
+    /**
+     * @ACL(name="test", description="Test action")
+     */
+    public function testAction()
+    {
+        echo 'TEST ACTION';
+    }
+    /**
+     * @ACL(name="test2", inherit=[test])
+     */
+    public function test2Action()
+    {
+        echo 'TEST 2 ACTION';
+    }
+}

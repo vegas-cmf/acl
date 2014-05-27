@@ -1,0 +1,18 @@
+namespace Test\Controllers\Frontend;
+
+/**
+ * Class ExampleController
+ *
+ * @ACL(name="mvc:text:Frontend\Example", description="Example controller")
+ * @package Test\Controllers\Frontend
+ */
+class ExampleController extends \Vegas\Mvc\Controller\ControllerAbstract
+{
+    /**
+     * @ACL(name="index", description="Index action")
+     */
+    public function indexAction()
+    {
+        echo 'INDEX ACTION';
+    }
+}
