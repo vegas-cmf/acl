@@ -15,6 +15,7 @@ namespace Vegas\Security\Acl;
 use Phalcon\Annotations\Adapter\Memory;
 use Phalcon\Annotations\AdapterInterface;
 use Phalcon\DI\InjectionAwareInterface;
+use Vegas\Mvc\Module\SubModuleManager;
 
 /**
  * ACL resources builder
@@ -156,8 +157,8 @@ class Builder
         foreach ($this->modules as $module) {
             $namespace = $this->getControllerNamespace($module);
             //browse controllers directories
-            foreach ($this->controllersDirectories as $directory) {
-                $controllers = $this->lookupControllers(dirname($module['path']) . $directory);
+            foreach (SubModuleManager::getSubModules() as $subModuleName) {
+                $controllers = $this->lookupControllers(dirname($module['path']) . '/controllers/' .  $subModuleName);
                 //browse module controllers list
                 foreach ($controllers as $controllerFile) {
                     $this->loadFile($controllerFile);
@@ -204,7 +205,7 @@ class Builder
         $controllers = array();
         $controllerNamePattern = '*Controller.php';
         if (file_exists($path)) {
-            foreach (glob($path . $controllerNamePattern) as $controllerFile) {
+            foreach (glob(rtrim($path, '/') . '/' . $controllerNamePattern) as $controllerFile) {
                 $controllers[] = $controllerFile;
             }
         }

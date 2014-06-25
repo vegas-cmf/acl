@@ -20,6 +20,11 @@ use \Vegas\Security\Acl\Role as UserRole;
 class RoleTask extends \Vegas\Cli\Task
 {
 
+    /**
+     * Default list of predefined ACL resources
+     *
+     * @var array
+     */
     private $predefinedResources  = array(
         'all'   =>  array(
             'description'   =>  'All privileges (for super admin)',
