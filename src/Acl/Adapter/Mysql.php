@@ -397,14 +397,14 @@ class Mysql extends PhalconAdapter implements AdapterInterface
      * </code>
      *
      * @param  string  $role
-     * @param  string  $resource
+     * @param  string  $resourceName
      * @param  string  $access
      * @return boolean
      */
-    public function isAllowed($role, $resource, $access)
+    public function isAllowed($role, $resourceName, $access)
     {
-        $resource = $this->filterResourceName($resource);
-        $access = AclAccessList::findFirstByRoleResourceAndAccess($role, $resource, $access);
+        $resourceName = $this->filterResourceName($resourceName);
+        $access = AclAccessList::findFirstByRoleResourceAndAccess($role, $resourceName, $access);
         if ($access instanceof AclAccessList) {
             return (bool) $access->allowed;
         }
@@ -412,7 +412,7 @@ class Mysql extends PhalconAdapter implements AdapterInterface
         /**
          * Check if there is an common rule for that resource
          */
-        $access = AclAccessList::findFirstByRoleResourceAndAccess($role, $resource, AclResourceAccess::WILDCARD);
+        $access = AclAccessList::findFirstByRoleResourceAndAccess($role, $resourceName, AclResourceAccess::WILDCARD);
         if ($access instanceof AclAccessList) {
             return (bool) $access->allowed;
         }
@@ -571,5 +571,24 @@ class Mysql extends PhalconAdapter implements AdapterInterface
             ]);
 
     }
-    
+
+    /**
+     * @return mixed
+     */
+    public function removeResources()
+    {
+        foreach (AclResource::find() as $resource) {
+            $resource->delete();
+        }
+    }
+
+    /**
+     * @return mixed
+     */
+    public function removeResourceAccesses()
+    {
+        foreach (AclResourceAccess::find() as $resourceAccess) {
+            $resourceAccess->delete();
+        }
+    }
 }

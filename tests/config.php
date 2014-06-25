@@ -8,7 +8,7 @@ return array(
         'host'      => 'localhost',
         'port'      => 3306, 
         'username'  => 'root',
-        'password'  => 'test',
+        'password'  => 'root',
         'dbname'    => 'vegas_test',
         'charset'   => 'utf8'
     )

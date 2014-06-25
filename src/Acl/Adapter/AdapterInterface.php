@@ -20,6 +20,15 @@ use \Phalcon\Acl\AdapterInterface as AclAdapterInterface;
  */
 interface AdapterInterface extends AclAdapterInterface
 {
+    /**
+     * @return mixed
+     */
+    public function removeResources();
+
+    /**
+     * @return mixed
+     */
+    public function removeResourceAccesses();
 
 }
  

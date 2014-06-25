@@ -484,26 +484,21 @@ class Mongo extends PhalconAdapter implements AdapterInterface
      * </code>
      *
      * @param  string  $role
-     * @param  string  $resource
-     * @param  string  $access
+     * @param  string  $resourceName
+     * @param  string  $accessName
      * @return boolean
      */
-    public function isAllowed($role, $resource, $access)
+    public function isAllowed($role, $resourceName, $accessName)
     {
-        $resource = $this->filterResourceName($resource);
+        $resourceName = $this->filterResourceName($resourceName);
         $accessList = $this->getCollection('accessList');
         $access = $accessList->findOne(array(
             '$or' => array(
                 array(
                     '$and' => array(
                         array('roles_name' => $role),
-                        array('resources_name' => $resource),
-                        array(
-                            '$or' => array(
-                                array('access_name' => $access),
-                                array('inherit' => $access)
-                            )
-                        )
+                        array('resources_name' => $resourceName),
+                        array('access_name' => $accessName)
                     )
                 ),
                 //is super admin ?
@@ -520,11 +515,38 @@ class Mongo extends PhalconAdapter implements AdapterInterface
         }
 
         /**
+         * Check the inherited permissions
+         */
+        $resource = $this->getCollection('resourcesAccesses')->findOne(
+            array(
+                'resources_name' => $resourceName,
+                '$or' => array(
+                    array(
+                        'access_name' => $accessName
+                    ),
+                    array(
+                        'access_inherit' => array('$in' => array($accessName))
+                    )
+                )
+            )
+        );
+        if ($resource) {
+            $access = $accessList->findOne(array(
+                'roles_name' => $role,
+                'resources_name' => $resource['resources_name'],
+                'access_name' => $resource['access_name']
+            ));
+            if (is_array($access)) {
+                return (bool) $access['allowed'];
+            }
+        }
+
+        /**
          * Check if there is an common rule for that resource
          */
         $access = $accessList->findOne(array(
             'roles_name'     => $role,
-            'resources_name' => $resource,
+            'resources_name' => $resourceName,
             'access_name'    => '*'
         ));
         if (is_array($access)) {
@@ -702,6 +724,22 @@ class Mongo extends PhalconAdapter implements AdapterInterface
         } else {
             $this->insertOrUpdateAccess($roleName, $resourceName, $accesses, $action);
         }
+    }
+
+    /**
+     * @return mixed
+     */
+    public function removeResources()
+    {
+        return $this->getCollection('resources')->remove(array());
+    }
+
+    /**
+     * @return mixed
+     */
+    public function removeResourceAccesses()
+    {
+        return $this->getCollection('resourcesAccesses')->remove(array());
     }
 }
  

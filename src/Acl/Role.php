@@ -23,6 +23,9 @@ class Role extends PhalconRole
 {
     const DEFAULT_ROLE_GUEST = "Guest";
 
+    const GUEST = 'Guest';
+    const SUPER_ADMIN = 'SuperAdmin';
+
     /**
      * List of role accesses
      *

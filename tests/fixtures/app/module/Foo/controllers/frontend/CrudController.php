@@ -1,12 +1,13 @@
-namespace Test\Controllers\Frontend;
+<?php
+namespace Foo\Controllers\Frontend;
 
 /**
- * Class ExampleController
+ * Class CrudController
  *
- * @ACL(name="mvc:text:Frontend\Example", description="Example crud controller")
- * @package Test\Controllers\Frontend
+ * @ACL(name="mvc:foo:Frontend\Crud", description="Example crud controller")
+ * @package Foo\Controllers\Frontend
  */
-class ExampleController extends \Vegas\Mvc\Controller\Crud
+class CrudController extends \Vegas\Mvc\Controller\Crud
 {
     /**
      * @ACL(name="index", description="Index action")

@@ -10,7 +10,7 @@
  * file that was distributed with this source code.
  */
 
-namespace Vegas\Security\Acl\EventsManager;
+namespace Vegas\Security\Acl\EventsListener;
 
 use Phalcon\Events\Event,
     Vegas\Mvc\User\Plugin as UserPlugin,
@@ -21,7 +21,7 @@ use User\Models\Role;
 
 /**
  *
- * @package Vegas\Security\Acl\EventsManager
+ * @package Vegas\Security\Acl\EventsListener
  */
 class Plugin extends UserPlugin
 {
@@ -56,6 +56,6 @@ class Plugin extends UserPlugin
         $module = $dispatcher->getModuleName();
         $controller = $dispatcher->getControllerName();
 
-        return sprintf('mvc:%s:%s', strtolower($module), str_replace('\\', '-', $controller));
+        return sprintf('mvc:%s:%s', lcfirst($module), str_replace('\\', '-', $controller));
     }
 } 
