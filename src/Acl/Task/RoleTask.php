@@ -20,6 +20,19 @@ use \Vegas\Security\Acl\Role as UserRole;
 class RoleTask extends \Vegas\Cli\Task
 {
 
+    private $predefinedResources  = array(
+        'all'   =>  array(
+            'description'   =>  'All privileges (for super admin)',
+            'accessList'    =>  array(
+                array(
+                    'name'  =>  '*',
+                    'description' => 'All',
+                    'inherit' => ''
+                )
+            )
+        )
+    );
+
     /**
      * Task must implement this method to set available options
      *
@@ -196,7 +209,8 @@ class RoleTask extends \Vegas\Cli\Task
         $acl->removeResourceAccesses();
 
         $config = $this->getDI()->get('config');
-        $resourceBuilder = new Builder($this->getDI()->get('modules'), $config['acl']->toArray());
+        $predefinedResources = isset($config['acl']) ? $config['acl']->toArray() : $this->predefinedResources;
+        $resourceBuilder = new Builder($this->getDI()->get('modules'), $predefinedResources);
         $aclResources = $resourceBuilder->build();
 
 

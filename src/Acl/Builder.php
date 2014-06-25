@@ -324,6 +324,9 @@ class Builder
             return array();
         }
         //get resource name from class annotation
+        if (!$annotations['class']->has('ACL')) {
+            return array();
+        }
         $classAclAnnotation = $annotations['class']->get('ACL');
         $resource = $classAclAnnotation->getArguments();
 
