@@ -13,6 +13,7 @@
 namespace Vegas\Security\Acl\Adapter\Mysql\Model;
 
 use Phalcon\Mvc\Model\Relation;
+use Vegas\Security\Acl\Resource;
 
 /**
  * @use \Vegas\Security\Acl\Adapter\Mysql\Model\AclResourceAccess
@@ -24,11 +25,6 @@ use Phalcon\Mvc\Model\Relation;
 class AclResourceAccess extends \Phalcon\Mvc\Model
 {
     const DEFAULT_ALIAS = 'ara';
-    
-    /**
-     * Reserved name of 'catch-all' access for specific resource
-     */
-    const WILDCARD = '*';
 
     /**
      * @var integer
@@ -98,7 +94,7 @@ class AclResourceAccess extends \Phalcon\Mvc\Model
      */
     public function isWildcard()
     {
-        return $this->name === static::WILDCARD;
+        return $this->name === Resource::WILDCARD;
     }
     
     /**

@@ -26,7 +26,8 @@ class DbServiceProvider implements ServiceProviderInterface
     public function register(DiInterface $di)
     {
         $di->set(self::SERVICE_NAME, function() use ($di) {
-            return new \Phalcon\Db\Adapter\Pdo\Mysql($di->get('config')->db);
+            $arrayConfig = $di->get('config')->db->toArray();
+            return new \Phalcon\Db\Adapter\Pdo\Mysql($arrayConfig);
         }, true);
     }
 

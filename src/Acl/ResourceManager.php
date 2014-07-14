@@ -18,7 +18,8 @@ use Vegas\Security\Acl\Exception\InvalidResourceNameException;
  *
  * @package Vegas\Security\Acl
  */
-class ResourceManager extends ManagerAbstract {
+class ResourceManager extends ManagerAbstract
+{
 
     /**
      * @return \Phalcon\Acl\ResourceInterface[]

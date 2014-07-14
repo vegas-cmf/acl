@@ -17,6 +17,7 @@ use Phalcon\DI;
 use Vegas\Security\Acl\Adapter\Mysql\Model\AclRole;
 use Vegas\Security\Acl\Adapter\Mysql\Model\AclResource;
 use Vegas\Security\Acl\Adapter\Mysql\Model\AclResourceAccess;
+use Vegas\Security\Acl\Resource;
 
 class MysqlTest extends \PHPUnit_Framework_TestCase
 {
@@ -38,11 +39,11 @@ class MysqlTest extends \PHPUnit_Framework_TestCase
         }
         $resource = new AclResource;
         $resource->create([
-            'name'          => AclResource::WILDCARD,
+            'name'          => Resource::WILDCARD,
             'description'   => 'All in all (built-in)',
         ]);
         (new AclResourceAccess)->create([
-            'name'            => AclResourceAccess::WILDCARD,
+            'name'            => Resource::WILDCARD,
             'description'     => 'All in all (built-in)',
             'acl_resource_id' => $resource->id
         ]);
@@ -50,7 +51,7 @@ class MysqlTest extends \PHPUnit_Framework_TestCase
     
     public function setUp()
     {
-        $this->acl = DI::getDefault()->get('acl_mysql');
+        $this->acl = DI::getDefault()->get('acl');
     }
 
     public function testPermissions()

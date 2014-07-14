@@ -111,8 +111,8 @@ class Mongo extends PhalconAdapter implements AdapterInterface
 
             $this->getCollection('accessList')->insert(array(
                 'roles_name'     => $role->getName(),
-                'resources_name' => '*',
-                'access_name'    => '*',
+                'resources_name' => Resource::WILDCARD,
+                'access_name'    => Resource::WILDCARD,
                 'allowed'        => $this->_defaultAccess
             ));
         }
@@ -192,7 +192,7 @@ class Mongo extends PhalconAdapter implements AdapterInterface
         $accessList = $this->getCollection('accessList')
             ->find(array(
                 'roles_name' => $roleName,
-                'access_name' => array('$nin' => array('*'))
+                'access_name' => array('$nin' => array(Resource::WILDCARD))
             ));
 
         return $accessList;
@@ -315,7 +315,7 @@ class Mongo extends PhalconAdapter implements AdapterInterface
         $accesses = $this->getCollection('resourcesAccesses')
             ->find(array(
                 'resources_name' => $this->filterResourceName($resourceName),
-                'access_name' => array('$nin' => array('*'))
+                'access_name' => array('$nin' => array(Resource::WILDCARD))
             )
         );
 
@@ -547,7 +547,7 @@ class Mongo extends PhalconAdapter implements AdapterInterface
         $access = $accessList->findOne(array(
             'roles_name'     => $role,
             'resources_name' => $resourceName,
-            'access_name'    => '*'
+            'access_name'    => Resource::WILDCARD
         ));
         if (is_array($access)) {
             return (bool) $access['allowed'];
@@ -575,16 +575,16 @@ class Mongo extends PhalconAdapter implements AdapterInterface
      * @param string $resourceName
      * @param mixed  $access
      */
-    public function allow($roleName, $resourceName, $access = '*')
+    public function allow($roleName, $resourceName, $access = Resource::WILDCARD)
     {
         $accesses = $access;
-        if ($access == '*') {
+        if ($access == Resource::WILDCARD) {
             $accessesCursor = $this->getResourceAccesses($resourceName);
             $accesses = array();
             foreach ($accessesCursor as $item) {
                 $accesses[] = $item;
             }
-            if (empty($accesses)) $accesses[] = '*';
+            if (empty($accesses)) $accesses[] = Resource::WILDCARD;
         }
         $this->allowOrDeny($roleName, $resourceName, $accesses, Acl::ALLOW);
     }
@@ -609,16 +609,16 @@ class Mongo extends PhalconAdapter implements AdapterInterface
      * @param  mixed   $access
      * @return boolean
      */
-    public function deny($roleName, $resourceName, $access = '*')
+    public function deny($roleName, $resourceName, $access = Resource::WILDCARD)
     {
         $accesses = $access;
-        if ($access == '*') {
+        if ($access == Resource::WILDCARD) {
             $accessesCursor = $this->getResourceAccesses($resourceName);
             $accesses = array();
             foreach ($accessesCursor as $item) {
                 $accesses[] = $item;
             }
-            if (empty($accesses)) $accesses[] = '*';
+            if (empty($accesses)) $accesses[] = Resource::WILDCARD;
         }
         $this->allowOrDeny($roleName, $resourceName, $accesses, Acl::DENY);
     }
@@ -688,13 +688,13 @@ class Mongo extends PhalconAdapter implements AdapterInterface
         $exists = $accessList->count(array(
             'roles_name'     => $roleName,
             'resources_name' => $resourceName,
-            'access_name'    => '*'
+            'access_name'    => Resource::WILDCARD
         ));
         if (!$exists) {
             $accessList->insert(array(
                 'roles_name'     => $roleName,
                 'resources_name' => $resourceName,
-                'access_name'    => '*',
+                'access_name'    => Resource::WILDCARD,
                 'allowed'        => $this->_defaultAccess
             ));
         }

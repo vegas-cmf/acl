@@ -12,6 +12,8 @@
 
 namespace Vegas\Security\Acl\Adapter\Mysql\Model;
 
+use Vegas\Security\Acl\Resource;
+
 /**
  * @use \Vegas\Security\Acl\Adapter\Mysql\Model\AclAccessList
  * @package Vegas\Security\Acl\Adapter\Mysql\Model
@@ -124,7 +126,7 @@ class AclAccessList extends \Phalcon\Mvc\Model
                             'role'      => $role,
                             'resource'  => $resource,
                             'access'    => $access,
-                            'all'       => AclResource::WILDCARD
+                            'all'       => Resource::WILDCARD
                         ])
                     ->getFirst();
     }

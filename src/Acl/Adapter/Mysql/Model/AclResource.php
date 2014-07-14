@@ -19,12 +19,6 @@ class AclResource extends \Phalcon\Mvc\Model
     use NameFinderTrait;
     
     const DEFAULT_ALIAS = 'ar';
-    
-    /**
-     * Reserved name of 'catch-all' access to all resources
-     * Prepared for powerusers
-     */
-    const WILDCARD = 'all';
 
     /**
      * @var integer

@@ -12,8 +12,11 @@
 
 namespace Vegas\Security\Acl\Task;
 
-use Vegas\Security\Acl\Adapter\Exception\ResourceNotExistsException;
-use Vegas\Security\Acl\Builder;
+use Vegas\Security\Acl\Adapter\Exception\ResourceNotExistsException,
+    Vegas\Security\Acl\Builder,
+    Vegas\Security\Acl\Resource,
+    Vegas\Cli\Task\Action,
+    Vegas\Cli\Task\Option;
 use \Vegas\Security\Acl\Role as UserRole;
 
 
@@ -30,13 +33,23 @@ class RoleTask extends \Vegas\Cli\Task
             'description'   =>  'All privileges (for super admin)',
             'accessList'    =>  array(
                 array(
-                    'name'  =>  '*',
+                    'name'  =>  Resource::WILDCARD,
                     'description' => 'All',
                     'inherit' => ''
                 )
             )
         )
     );
+    
+    /**
+     * Shorthand method to retrieve valid ACL instance from DI container.
+     * 
+     * @return \Vegas\Security\Acl
+     */
+    private function getAcl()
+    {
+        return $this->getDI()->get('acl');
+    }
 
     /**
      * Task must implement this method to set available options
@@ -49,49 +62,49 @@ class RoleTask extends \Vegas\Cli\Task
         $this->addTaskAction($setupAction);
 
         // add action
-        $addAction = new \Vegas\Cli\Task\Action('add', 'Add a new role');
-        $option = new \Vegas\Cli\Task\Option('name', 'n', 'Name of role');
+        $addAction = new Action('add', 'Add a new role');
+        $option = new Option('name', 'n', 'Name of role');
         $option->setRequired(true);
         $addAction->addOption($option);
-        $option = new \Vegas\Cli\Task\Option('description', 'd', 'Description of role');
+        $option = new Option('description', 'd', 'Description of role');
         $addAction->addOption($option);
 
         $this->addTaskAction($addAction);
 
         // remove action
-        $removeAction = new \Vegas\Cli\Task\Action('remove', 'Remove a role');
-        $option = new \Vegas\Cli\Task\Option('name', 'n', 'Name of role to remove');
+        $removeAction = new Action('remove', 'Remove a role');
+        $option = new Option('name', 'n', 'Name of role to remove');
         $option->setRequired(true);
         $removeAction->addOption($option);
 
         $this->addTaskAction($removeAction);
 
         // allow action
-        $allowAction = new \Vegas\Cli\Task\Action('allow', 'Allow resource for role');
-        $option = new \Vegas\Cli\Task\Option('name', 'n', 'Name of role');
+        $allowAction = new Action('allow', 'Allow resource for role');
+        $option = new Option('name', 'n', 'Name of role');
         $option->setRequired(true);
         $allowAction->addOption($option);
 
-        $option = new \Vegas\Cli\Task\Option('resource', 'r', 'Resource to allow');
+        $option = new Option('resource', 'r', 'Resource to allow');
         $option->setRequired(true);
         $allowAction->addOption($option);
 
-        $option = new \Vegas\Cli\Task\Option('access_list', 'al', 'List of accesses in resource to allow');
+        $option = new Option('access_list', 'al', 'List of accesses in resource to allow');
         $allowAction->addOption($option);
 
         $this->addTaskAction($allowAction);
 
         // deny action
-        $denyAction = new \Vegas\Cli\Task\Action('deny', 'Deny resource for role');
-        $option = new \Vegas\Cli\Task\Option('name', 'n', 'Name of role');
+        $denyAction = new Action('deny', 'Deny resource for role');
+        $option = new Option('name', 'n', 'Name of role');
         $option->setRequired(true);
         $denyAction->addOption($option);
 
-        $option = new \Vegas\Cli\Task\Option('resource', 'r', 'Resource to deny');
+        $option = new Option('resource', 'r', 'Resource to deny');
         $option->setRequired(true);
         $denyAction->addOption($option);
 
-        $option = new \Vegas\Cli\Task\Option('access_list', 'al', 'List of accesses in resource to deny');
+        $option = new Option('access_list', 'al', 'List of accesses in resource to deny');
         $denyAction->addOption($option);
 
         $this->addTaskAction($denyAction);
@@ -108,12 +121,12 @@ class RoleTask extends \Vegas\Cli\Task
      */
     public function setupAction()
     {
-        $acl = $this->di->get('acl');
+        $acl = $this->getAcl();
         $roleManager = $acl->getRoleManager();
 
-        $roleManager->add(\Vegas\Security\Acl\Role::DEFAULT_ROLE_GUEST, 'Not authenticated user', true);
+        $roleManager->add(UserRole::DEFAULT_ROLE_GUEST, 'Not authenticated user', true);
         $roleManager->add(UserRole::SUPER_ADMIN, 'Super administrator with all privileges', true);
-        $acl->allow(UserRole::SUPER_ADMIN, 'all', '*');
+        $acl->allow(UserRole::SUPER_ADMIN, 'all', Resource::WILDCARD);
 
         $this->putText('Success.');
     }
@@ -127,7 +140,7 @@ class RoleTask extends \Vegas\Cli\Task
         $description = $this->getOption('d');
 
         //creates role
-        $this->di->get('acl')->getRoleManager()->add($name, $description);
+        $this->getAcl()->getRoleManager()->add($name, $description);
 
         $this->putText('Success.');
     }
@@ -140,7 +153,7 @@ class RoleTask extends \Vegas\Cli\Task
         $name = $this->getOption('n');
 
         //removes role
-        $this->di->get('acl')->getRoleManager()->dropRole($name);
+        $this->getAcl()->getRoleManager()->dropRole($name);
 
         $this->putText('Success.');
     }
@@ -153,7 +166,7 @@ class RoleTask extends \Vegas\Cli\Task
         $roleName = $this->getOption('n');
         $resourceName = $this->getOption('r');
 
-        $acl = $this->getDI()->get('acl');
+        $acl = $this->getAcl();
 
         $role = $acl->getRole($roleName);
         $resource = $acl->getResource($resourceName);
@@ -165,7 +178,7 @@ class RoleTask extends \Vegas\Cli\Task
                 }
             }
         } else {
-            $accessList = array('*');
+            $accessList = array(Resource::WILDCARD);
         }
 
         $acl->allow($role->getName(), $resource->getName(), $accessList);
@@ -181,13 +194,14 @@ class RoleTask extends \Vegas\Cli\Task
         $roleName = $this->getOption('n');
         $resourceName = $this->getOption('r');
 
-        $acl = $this->getDI()->get('acl');
+        $acl = $this->getAcl();
 
         $role = $acl->getRole($roleName);
         $resource = $acl->getResource($resourceName);
 
         if (($accessList = $this->getOption('al'))) {
             //creates access list
+            $params = $this->getArgs();
             $accessList = array_splice($params, 2);
             foreach ($accessList as $access) {
                 if (!$resource->hasAccess($access)) {
@@ -195,7 +209,7 @@ class RoleTask extends \Vegas\Cli\Task
                 }
             }
         } else {
-            $accessList = array('*');
+            $accessList = array(Resource::WILDCARD);
         }
 
         $acl->deny($role->getName(), $resource->getName(), $accessList);
@@ -209,7 +223,7 @@ class RoleTask extends \Vegas\Cli\Task
     public function buildAction()
     {
         //clears collection before build
-        $acl = $this->getDI()->get('acl');
+        $acl = $this->getAcl();
         $acl->removeResources();
         $acl->removeResourceAccesses();
 
@@ -219,7 +233,7 @@ class RoleTask extends \Vegas\Cli\Task
         $aclResources = $resourceBuilder->build();
 
 
-        $resourceManager = $this->getDI()->get('acl')->getResourceManager();
+        $resourceManager = $this->getAcl()->getResourceManager();
         foreach ($aclResources as $aclResource) {
             if (empty($aclResource)) continue;
             $resourceManager->add(
