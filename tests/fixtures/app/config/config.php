@@ -26,10 +26,6 @@ return array(
 
     'plugins' => array(),
 
-    'mongo' => array(
-        'db' => 'vegas_test',
-    ),
-
     'acl' => array(
         'all'   =>  array(
             'description'   =>  'All privileges (for super admin)',
@@ -42,15 +38,4 @@ return array(
             )
         )
     ),
-
-    'db'    =>  array(
-        "host" => "localhost",
-        "dbname" => "vegas",
-        "port" => 3306,
-        "username" => "root",
-        "password" => "root",
-        "options" => array(
-            PDO::MYSQL_ATTR_INIT_COMMAND => 'SET NAMES utf8'
-        )
-    )
 );
