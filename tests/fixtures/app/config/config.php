@@ -5,11 +5,11 @@ return array(
     'application' => array(
         'environment'   =>  \Vegas\Constants::TEST_ENV,
 
-        'servicesDir'   =>  APP_ROOT . '/app/services/',
+        'serviceDir'   =>  APP_ROOT . '/app/services/',
         'configDir'     => dirname(__FILE__) . DIRECTORY_SEPARATOR,
         'libraryDir'     => dirname(APP_ROOT) . DIRECTORY_SEPARATOR . '/lib/',
         'pluginDir'      => APP_ROOT . '/app/plugins/',
-        'moduleDir'      => APP_ROOT . '/app/module/',
+        'moduleDir'      => APP_ROOT . '/app/modules/',
         'tasksDir'      => APP_ROOT . '/app/tasks/',
         'baseUri'        => '/',
         'language'       => 'nl_NL',
