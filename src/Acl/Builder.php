@@ -157,7 +157,11 @@ class Builder
         foreach ($this->modules as $module) {
             $namespace = $this->getControllerNamespace($module);
             //browse controllers directories
-            $directoryIterator = new \DirectoryIterator(dirname($module['path']) . DIRECTORY_SEPARATOR . 'controllers' . DIRECTORY_SEPARATOR);
+            $controllersDir = dirname($module['path']) . DIRECTORY_SEPARATOR . 'controllers';
+            if (!file_exists($controllersDir)) {
+                continue;
+            }
+            $directoryIterator = new \DirectoryIterator($controllersDir);
             foreach ($directoryIterator as $directory) {
                 if ($directory->isDot()) {
                     continue;
