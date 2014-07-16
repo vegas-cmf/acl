@@ -232,7 +232,6 @@ class RoleTask extends \Vegas\Cli\Task
         $resourceBuilder = new Builder($this->getDI()->get('modules'), $predefinedResources);
         $aclResources = $resourceBuilder->build();
 
-
         $resourceManager = $this->getAcl()->getResourceManager();
         foreach ($aclResources as $aclResource) {
             if (empty($aclResource)) continue;

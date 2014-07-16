@@ -157,8 +157,13 @@ class Builder
         foreach ($this->modules as $module) {
             $namespace = $this->getControllerNamespace($module);
             //browse controllers directories
-            foreach (SubModuleManager::getSubModules() as $subModuleName) {
-                $controllers = $this->lookupControllers(dirname($module['path']) . '/controllers/' .  $subModuleName);
+            $directoryIterator = new \DirectoryIterator(dirname($module['path']) . DIRECTORY_SEPARATOR . 'controllers' . DIRECTORY_SEPARATOR);
+            foreach ($directoryIterator as $directory) {
+                if ($directory->isDot()) {
+                    continue;
+                }
+
+                $controllers = $this->lookupControllers($directory->getPath() . DIRECTORY_SEPARATOR . $directory->getFileName());
                 //browse module controllers list
                 foreach ($controllers as $controllerFile) {
                     $this->loadFile($controllerFile);
