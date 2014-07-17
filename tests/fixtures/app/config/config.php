@@ -24,7 +24,12 @@ return array(
         'hostname' => 'vegas.dev'
     ),
 
-    'plugins' => array(),
+    'plugins' => array(
+        'acl' => array(
+            'class' => 'AclPlugin',
+            'attach' => 'dispatch'
+        )
+    ),
     
     'mongo' => array(
         'db' => 'vegas_test',

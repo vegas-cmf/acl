@@ -13,11 +13,11 @@
 namespace Vegas\Security\Acl\EventsListener;
 
 use Phalcon\Events\Event,
-    Vegas\Mvc\User\Plugin as UserPlugin,
+    Phalcon\Mvc\User\Plugin as UserPlugin,
     Phalcon\Mvc\Dispatcher,
     Phalcon\Acl;
 use Vegas\Security\Acl\Exception\NotAllowedException;
-use User\Models\Role;
+use Vegas\Security\Acl\Role;
 
 /**
  *
@@ -32,7 +32,7 @@ class Plugin extends UserPlugin
      */
     public function beforeExecuteRoute(Event $event, Dispatcher $dispatcher)
     {
-        $authentication = $this->ensureAuthenticationInCurrentScope();
+        $authentication = $this->ensureAuthentication();
         if ($authentication) {
             $role = $authentication->getIdentity()->getRole();
         } else {
@@ -45,6 +45,32 @@ class Plugin extends UserPlugin
             $this->flash->error('acl.error.not_allowed');
             throw new NotAllowedException();
         }
+    }
+
+    /**
+     * @return bool|object
+     */
+    protected function ensureAuthentication()
+    {
+        $matchedRoute = $this->router->getMatchedRoute();
+        $paths = $matchedRoute->getPaths();
+
+        if (!isset($paths['auth'])) {
+            //authentication is disabled by default
+            $authSessionKey = false;
+        } else {
+            $authSessionKey = $paths['auth'];
+        }
+
+        if (!$authSessionKey) {
+            return false;
+        }
+
+        if (!$this->getDI()->has($authSessionKey)) {
+            return false;
+        }
+
+        return $this->getDI()->get($authSessionKey);
     }
 
     /**
