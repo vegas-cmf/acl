@@ -21,5 +21,23 @@ use \Vegas\Security\Acl\Exception as AclException;
 class NotAllowedException extends AclException
 {
     protected $code = 403;
-    protected $message = "You are not authorized to see this content";
+    protected $message = "You are not authorized to see this content.";
+
+    public function appendRole($role)
+    {
+        $this->message .= ' Role: '.$role;
+        return $this;
+    }
+
+    public function appendResource($resource)
+    {
+        $this->message .= ' Resource: '.$resource;
+        return $this;
+    }
+
+    public function appendAccess($access)
+    {
+        $this->message .= ' Access: '.$access;
+        return $this;
+    }
 } 
