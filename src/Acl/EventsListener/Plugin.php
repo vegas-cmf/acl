@@ -42,8 +42,7 @@ class Plugin extends UserPlugin
         $access = $dispatcher->getActionName();
         $allowed = $this->di->get('acl')->isAllowed($role, $resource, $access);
         if ($allowed != Acl::ALLOW) {
-            $this->flash->error('acl.error.not_allowed');
-            throw new NotAllowedException();
+            $this->dispatcher->getEventsManager()->fire('dispatch:beforeException', $this->dispatcher, new NotAllowedException());
         }
     }
 
