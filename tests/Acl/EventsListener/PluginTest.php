@@ -15,5 +15,8 @@ namespace Vegas\Tests\Acl\EventsListener;
 
 class PluginTest extends \PHPUnit_Framework_TestCase
 {
-
-} 
+    public function testOK()
+    {
+        $this->assertTrue(true);
+    }
+}

@@ -51,7 +51,7 @@ class MysqlTest extends \PHPUnit_Framework_TestCase
     
     public function setUp()
     {
-        $this->acl = DI::getDefault()->get('acl');
+        $this->acl = DI::getDefault()->get('acl_mysql');
     }
 
     public function testPermissions()

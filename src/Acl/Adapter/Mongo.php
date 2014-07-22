@@ -438,6 +438,7 @@ class Mongo extends PhalconAdapter implements AdapterInterface
      *
      * @param string       $resourceName
      * @param array|string $accessList
+     * @return bool
      */
     public function dropResourceAccess($resourceName, $accessList)
     {
@@ -451,6 +452,7 @@ class Mongo extends PhalconAdapter implements AdapterInterface
             $this->getCollection('resourcesAccesses')
                 ->remove(array('resources_name' => $this->filterResourceName($resourceName), 'access_name' => $access));
         }
+        return true;
     }
 
     /**

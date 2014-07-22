@@ -255,6 +255,7 @@ class Mysql extends PhalconAdapter implements AdapterInterface
      *
      * @param string       $resourceName
      * @param array|string $accessList
+     * @return boolean
      */
     public function dropResourceAccess($resourceName, $accessList)
     {
@@ -269,6 +270,8 @@ class Mysql extends PhalconAdapter implements AdapterInterface
             $this->getResourceAccessModel($access, $sanitizedResourceName)
                     ->delete();
         }
+        
+        return true;
     }
     
     /**

@@ -80,7 +80,7 @@ class ResourceManager extends ManagerAbstract
      * @param $name
      * @return bool
      */
-    public function isResources($name)
+    public function isResource($name)
     {
         $result = $this->adapter->isResource($name);
 
