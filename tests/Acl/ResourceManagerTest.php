@@ -79,6 +79,8 @@ class ResourceManagerTest extends \PHPUnit_Framework_TestCase
         $name2 = 'Fake resource with accesses';
         
         $this->assertFalse($this->manager->isResource($name1));
+        $this->assertFalse($this->manager->isResource($name2));
+        
         $oldResourceCount = count($this->manager->getResources());
         
         $this->assertTrue($this->manager->add($name1, 'Temporary resource'));

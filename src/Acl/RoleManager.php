@@ -77,12 +77,9 @@ class RoleManager extends ManagerAbstract
 
     /**
      * @param $name
-     * @return mixed
      */
     public function dropRole($name)
     {
-        $result = $this->adapter->dropRole($name);
-
-        return $result;
+        $this->adapter->dropRole($name);
     }
 }

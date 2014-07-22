@@ -18,8 +18,8 @@ use \Vegas\Security\Exception as SecurityException;
  *
  * @package Vegas\Security\Acl
  */
-class Exception extends SecurityException {
-
+class Exception extends SecurityException
+{
     protected $message = "ACL error";
 }
  
