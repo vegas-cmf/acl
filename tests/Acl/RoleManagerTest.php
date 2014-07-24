@@ -39,27 +39,10 @@ class RoleManagerTest extends \PHPUnit_Framework_TestCase
         );
     }
     
-    /**
-     * Clear all ACL settings before starting tests.
-     */
-    public static function setUpBeforeClass()
-    {
-        $mongo = DI::getDefault()->get('mongo');
-        $mongo->selectCollection('vegas_acl_roles')->remove();
-        $mongo->selectCollection('vegas_acl_resources')->remove();
-        $mongo->selectCollection('vegas_acl_access_list')->remove();
-        $mongo->selectCollection('vegas_acl_resources_accesses')->remove();
-    }
-    
     public function setUp()
     {
         $this->acl = DI::getDefault()->get('acl');
         $this->manager = $this->acl->getRoleManager();
-    }
-    
-    public function testConstructor()
-    {
-        $this->assertInstanceOf('\Vegas\Security\Acl\RoleManager', $this->manager);
     }
     
     public function testCannotAddRoleWithEmptyName()
@@ -67,6 +50,7 @@ class RoleManagerTest extends \PHPUnit_Framework_TestCase
         $name = '';
         try {
             $this->manager->add($name, 'Description of role');
+            $this->fail('Exception not triggered');
         } catch (\Exception $e) {
             $this->assertInstanceOf('\Vegas\Security\Acl\Exception\InvalidRoleNameException', $e);
         }
@@ -104,6 +88,7 @@ class RoleManagerTest extends \PHPUnit_Framework_TestCase
         $this->assertFalse($this->manager->isRole('NonExistingRole'));
         try {
             $this->manager->getRole('NonExistingRole');
+            $this->fail('Exception not triggered');
         } catch (\Exception $e) {
             $this->assertInstanceOf('\Vegas\Security\Acl\Adapter\Exception\RoleNotExistsException', $e);
         }
@@ -114,6 +99,7 @@ class RoleManagerTest extends \PHPUnit_Framework_TestCase
         $this->assertFalse($this->manager->isRole('NonExistingRole'));
         try {
             $this->manager->dropRole('NonExistingRole');
+            $this->fail('Exception not triggered');
         } catch (\Exception $e) {
             $this->assertInstanceOf('\Vegas\Security\Acl\Adapter\Exception\RoleNotExistsException', $e);
         }

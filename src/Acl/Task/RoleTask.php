@@ -126,7 +126,7 @@ class RoleTask extends \Vegas\Cli\Task
 
         $roleManager->add(UserRole::DEFAULT_ROLE_GUEST, 'Not authenticated user', true);
         $roleManager->add(UserRole::SUPER_ADMIN, 'Super administrator with all privileges', true);
-        $acl->allow(UserRole::SUPER_ADMIN, 'all', Resource::WILDCARD);
+        $acl->allow(UserRole::SUPER_ADMIN, 'all', Resource::ACCESS_WILDCARD);
 
         $this->putText('Success.');
     }

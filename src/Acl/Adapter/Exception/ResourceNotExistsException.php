@@ -27,7 +27,7 @@ class ResourceNotExistsException extends AclAdapterException
      */
     public function __construct($resourceName = '')
     {
-        $this->message = sprintf("Resource %s does not exist", $resourceName);
+        $this->message = sprintf("Resource '%s' does not exist", $resourceName);
     }
 }
  

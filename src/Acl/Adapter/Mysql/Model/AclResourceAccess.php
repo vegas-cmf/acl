@@ -59,7 +59,7 @@ class AclResourceAccess extends \Phalcon\Mvc\Model
         $this->belongsTo("acl_resource_id", "\Vegas\Security\Acl\Adapter\Mysql\Model\AclResource", "id", [
             'alias' => AclResource::DEFAULT_ALIAS,
         ]);
-        $this->hasMany("acl_resource_access_id", "\Vegas\Security\Acl\Adapter\Mysql\Model\AclAccessList", "id", [
+        $this->hasMany("id", "\Vegas\Security\Acl\Adapter\Mysql\Model\AclAccessList", "acl_resource_access_id", [
             'alias'  => AclAccessList::DEFAULT_ALIAS,
             'foreignKey' => [
                 'action' => Relation::ACTION_CASCADE
@@ -94,7 +94,18 @@ class AclResourceAccess extends \Phalcon\Mvc\Model
      */
     public function isWildcard()
     {
-        return $this->name === Resource::WILDCARD;
+        return $this->name === Resource::ACCESS_WILDCARD;
+    }
+    
+    /**
+     * @return array
+     */
+    public function toAccessArray()
+    {
+        return [
+            'access_name'          => (string)$this,
+            'access_description'   => $this->description
+        ];
     }
     
     /**

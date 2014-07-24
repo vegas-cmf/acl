@@ -23,11 +23,12 @@ class ResourceAccessNotExistsException extends AclAdapterException
     protected $message = "Resource access setting does not exist";
 
     /**
+     * @param string $accessName
      * @param string $resourceName
      */
-    public function __construct($resourceName = '')
+    public function __construct($accessName = '', $resourceName = '')
     {
-        $this->message = sprintf("Resource access setting %s does not exist", $resourceName);
+        $this->message = sprintf("Access '%s' does not exist in resource '%s' in ACL", $accessName, $resourceName);
     }
 }
  

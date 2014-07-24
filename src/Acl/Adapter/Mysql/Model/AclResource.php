@@ -47,13 +47,13 @@ class AclResource extends \Phalcon\Mvc\Model
     
     public function initialize()
     {
-        $this->hasMany("acl_resource_access_id", "\Vegas\Security\Acl\Adapter\Mysql\Model\AclResourceAccess", "id", [
+        $this->hasMany("id", "\Vegas\Security\Acl\Adapter\Mysql\Model\AclResourceAccess", "acl_resource_id", [
             'alias'  => AclResourceAccess::DEFAULT_ALIAS,
             'foreignKey' => [
                 'action' => Relation::ACTION_CASCADE
             ]
         ]);
-        $this->hasMany("acl_resource_id", "\Vegas\Security\Acl\Adapter\Mysql\Model\AclAccessList", "id", [
+        $this->hasMany("id", "\Vegas\Security\Acl\Adapter\Mysql\Model\AclAccessList", "acl_resource_id", [
             'alias'  => AclAccessList::DEFAULT_ALIAS,
             'foreignKey' => [
                 'action' => Relation::ACTION_CASCADE
@@ -83,21 +83,6 @@ class AclResource extends \Phalcon\Mvc\Model
     }
     
     /**
-     * @return AclResourceAccess[]
-     */
-    public function getResourceAccessesWithoutWildcard()
-    {
-        $accesses = [];
-        foreach ($this->getResourceAccesses() as $item) {
-            if ($item->isWildcard()) {
-                continue;   // skip '*'
-            }
-            $accesses[] = $item;
-        }
-        return $accesses;
-    }
-    
-    /**
      * Casts related accesses used in \Vegas\Security\Acl\Resource
      * @return array
      */
@@ -105,10 +90,7 @@ class AclResource extends \Phalcon\Mvc\Model
     {
         $result = [];
         foreach ($this->getResourceAccesses() as $access) {
-            if ($access->isWildcard()) {
-                continue;   // skip '*' access
-            }
-            $result[(string)$access] = $access->description;
+            $result[] = $access->toAccessArray();
         }
         return $result;
     }

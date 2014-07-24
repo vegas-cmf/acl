@@ -21,5 +21,13 @@ use Vegas\Security\Acl\Adapter\Exception as AclAdapterException;
 class RoleNotExistsException extends AclAdapterException
 {
     protected $message = "Role does not exist";
+    
+    /**
+     * @param string $roleName
+     */
+    public function __construct($roleName = '')
+    {
+        $this->message = sprintf("Role '%s' does not exist", $roleName);
+    }
 }
  

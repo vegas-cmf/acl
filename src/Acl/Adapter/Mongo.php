@@ -12,13 +12,14 @@
 
 namespace Vegas\Security\Acl\Adapter;
 
-use \Phalcon\Acl\Adapter as PhalconAdapter;
-use Phalcon\Acl;
-use Phalcon\DI;
-use Vegas\Security\Acl\Adapter\Exception\ResourceNotExistsException;
-use Vegas\Security\Acl\Adapter\Exception\RoleNotExistsException;
-use Vegas\Security\Acl\Role;
-use Vegas\Security\Acl\Resource;
+use Phalcon\Acl\Adapter as PhalconAdapter,
+    Phalcon\Acl,
+    Phalcon\DI;
+use Vegas\Security\Acl\Adapter\Exception\ResourceNotExistsException,
+    Vegas\Security\Acl\Adapter\Exception\RoleNotExistsException,
+    Vegas\Security\Acl\Adapter\Exception\ResourceAccessNotExistsException,
+    Vegas\Security\Acl\Role,
+    Vegas\Security\Acl\Resource;
 
 /**
  * @use \Phalcon\Acl\Adapter\Mongo
@@ -108,13 +109,6 @@ class Mongo extends PhalconAdapter implements AdapterInterface
                 'description' => $role->getDescription(),
                 'removable'   => $role->isRemovable()
             ));
-
-            $this->getCollection('accessList')->insert(array(
-                'roles_name'     => $role->getName(),
-                'resources_name' => Resource::WILDCARD,
-                'access_name'    => Resource::WILDCARD,
-                'allowed'        => $this->_defaultAccess
-            ));
         }
 
         if ($accessInherits) {
@@ -153,7 +147,7 @@ class Mongo extends PhalconAdapter implements AdapterInterface
             $role = $this->getCollection('roles')->findOne(array('name' => $role));
         }
         if (!$role) {
-            throw new RoleNotExistsException();
+            throw new RoleNotExistsException($role);
         }
         $accessList = $this->getRoleAccesses($role['name']);
 
@@ -192,7 +186,7 @@ class Mongo extends PhalconAdapter implements AdapterInterface
         $accessList = $this->getCollection('accessList')
             ->find(array(
                 'roles_name' => $roleName,
-                'access_name' => array('$nin' => array(Resource::WILDCARD))
+                'access_name' => array('$nin' => array(Resource::ACCESS_WILDCARD))
             ));
 
         return $accessList;
@@ -215,7 +209,7 @@ class Mongo extends PhalconAdapter implements AdapterInterface
     {
         $role = $this->getRole($roleName);
         if (!$role) {
-            throw new RoleNotExistsException();
+            throw new RoleNotExistsException($roleName);
         }
 
         //removes role
@@ -237,12 +231,12 @@ class Mongo extends PhalconAdapter implements AdapterInterface
     public function addInherit($roleName, $roleToInherit)
     {
         //finds role and role's access list
-        $role = $this->getRole($roleName);
+        $role = $this->getRole($roleToInherit);
         foreach ($role['accessList'] as $accessList) {
             if ($accessList['allowed']) {
                 $this->allow($roleName, $accessList['resources_name'], $accessList['access_name']);
             } else {
-                $this->deny($role, $accessList['resources_name'], $accessList['access_name']);
+                $this->deny($roleName, $accessList['resources_name'], $accessList['access_name']);
             }
         }
 
@@ -270,10 +264,10 @@ class Mongo extends PhalconAdapter implements AdapterInterface
         $name = $this->filterResourceName($name);
         $resource = $this->getCollection('resources')->findOne(array('name' => $name));
         if (!$resource) {
-            throw new ResourceNotExistsException();
+            throw new ResourceNotExistsException($name);
         }
         $accesses = $this->getResourceAccesses($resource['name']);
-        $resourceObject = new \Vegas\Security\Acl\Resource($resource['name'], $resource['description']);
+        $resourceObject = new Resource($resource['name'], $resource['description']);
         $resourceObject->setAccesses($accesses);
 
         return $resourceObject;
@@ -315,7 +309,7 @@ class Mongo extends PhalconAdapter implements AdapterInterface
         $accesses = $this->getCollection('resourcesAccesses')
             ->find(array(
                 'resources_name' => $this->filterResourceName($resourceName),
-                'access_name' => array('$nin' => array(Resource::WILDCARD))
+                'access_name' => array('$nin' => array(Resource::ACCESS_WILDCARD))
             )
         );
 
@@ -381,7 +375,7 @@ class Mongo extends PhalconAdapter implements AdapterInterface
     public function addResourceAccess($resourceName, $accessList)
     {
         if (!$this->isResource($resourceName)) {
-            throw new Exception("Resource '" . $resourceName . "' does not exist in ACL");
+            throw new ResourceNotExistsException($resourceName);
         }
 
         $resourcesAccesses = $this->getCollection('resourcesAccesses');
@@ -463,7 +457,7 @@ class Mongo extends PhalconAdapter implements AdapterInterface
     {
         $resource = $this->getResource($resourceName);
         if (!$resource) {
-            throw new ResourceNotExistsException();
+            throw new ResourceNotExistsException($resourceName);
         }
 
         //removes resource
@@ -494,65 +488,32 @@ class Mongo extends PhalconAdapter implements AdapterInterface
     {
         $resourceName = $this->filterResourceName($resourceName);
         $accessList = $this->getCollection('accessList');
-        $access = $accessList->findOne(array(
-            '$or' => array(
-                array(
-                    '$and' => array(
-                        array('roles_name' => $role),
-                        array('resources_name' => $resourceName),
-                        array('access_name' => $accessName)
-                    )
-                ),
+        $access = $accessList->findOne([
+            '$or' => [
+                [
+                    '$and' => [
+                        ['roles_name' => $role],
+                        ['resources_name' => $resourceName],
+                        [
+                            '$or' => [
+                                ['access_name' => $accessName],
+                                ['access_inherit' => ['$in' => [$accessName]]]
+                            ]
+                        ]
+                    ]
+                ],
                 //is super admin ?
-                array(
-                    '$and' => array(
-                        array('roles_name' => $role),
-                        array('resources_name' => 'all')
-                    )
-                )
-            )
-        ));
+                [
+                    '$and' => [
+                        ['roles_name' => $role],
+                        ['resources_name' => Resource::WILDCARD],
+                        ['access_name' => Resource::ACCESS_WILDCARD]
+                    ]
+                ]
+            ]
+        ]);
         if (is_array($access)) {
-            return (bool) $access['allowed'];
-        }
-
-        /**
-         * Check the inherited permissions
-         */
-        $resource = $this->getCollection('resourcesAccesses')->findOne(
-            array(
-                'resources_name' => $resourceName,
-                '$or' => array(
-                    array(
-                        'access_name' => $accessName
-                    ),
-                    array(
-                        'access_inherit' => array('$in' => array($accessName))
-                    )
-                )
-            )
-        );
-        if ($resource) {
-            $access = $accessList->findOne(array(
-                'roles_name' => $role,
-                'resources_name' => $resource['resources_name'],
-                'access_name' => $resource['access_name']
-            ));
-            if (is_array($access)) {
-                return (bool) $access['allowed'];
-            }
-        }
-
-        /**
-         * Check if there is an common rule for that resource
-         */
-        $access = $accessList->findOne(array(
-            'roles_name'     => $role,
-            'resources_name' => $resourceName,
-            'access_name'    => Resource::WILDCARD
-        ));
-        if (is_array($access)) {
-            return (bool) $access['allowed'];
+            return $access['allowed'] ? Acl::ALLOW : Acl::DENY;
         }
 
         return $this->_defaultAccess;
@@ -560,50 +521,39 @@ class Mongo extends PhalconAdapter implements AdapterInterface
 
     /**
      * {@inheritdoc}
-     * You can use '*' as wildcard
      * Example:
      * <code>
      * //Allow access to guests to search on customers
      * $acl->allow('guests', 'customers', 'search');
      * //Allow access to guests to search or create on customers
      * $acl->allow('guests', 'customers', array('search', 'create'));
-     * //Allow access to any role to browse on products
-     * $acl->allow('*', 'products', 'browse');
-     * //Allow access to any role to browse on any resource
-     * $acl->allow('*', '*', 'browse');
+     * //Allow admin access to role
+     * $acl->allow('admins', 'all', '*');
      * </code>
      *
      * @param string $roleName
      * @param string $resourceName
      * @param mixed  $access
      */
-    public function allow($roleName, $resourceName, $access = Resource::WILDCARD)
+    public function allow($roleName, $resourceName, $access)
     {
-        $accesses = $access;
-        if ($access == Resource::WILDCARD) {
-            $accessesCursor = $this->getResourceAccesses($resourceName);
-            $accesses = array();
-            foreach ($accessesCursor as $item) {
-                $accesses[] = $item;
-            }
-            if (empty($accesses)) $accesses[] = Resource::WILDCARD;
+        $accesses = $this->getValidatedAccesses($roleName, $resourceName, $access);
+        
+        foreach ($accesses as $accessName) {
+            $this->insertOrUpdateAccess($roleName, $resourceName, $accessName, Acl::ALLOW);
         }
-        $this->allowOrDeny($roleName, $resourceName, $accesses, Acl::ALLOW);
     }
 
     /**
      * {@inheritdoc}
-     * You can use '*' as wildcard
      * Example:
      * <code>
      * //Deny access to guests to search on customers
      * $acl->deny('guests', 'customers', 'search');
      * //Deny access to guests to search or create on customers
      * $acl->deny('guests', 'customers', array('search', 'create'));
-     * //Deny access to any role to browse on products
-     * $acl->deny('*', 'products', 'browse');
-     * //Deny access to any role to browse on any resource
-     * $acl->deny('*', '*', 'browse');
+     * //Remove admin access to role
+     * $acl->deny('admins', 'all', '*');
      * </code>
      *
      * @param  string  $roleName
@@ -611,18 +561,54 @@ class Mongo extends PhalconAdapter implements AdapterInterface
      * @param  mixed   $access
      * @return boolean
      */
-    public function deny($roleName, $resourceName, $access = Resource::WILDCARD)
+    public function deny($roleName, $resourceName, $access)
     {
-        $accesses = $access;
-        if ($access == Resource::WILDCARD) {
-            $accessesCursor = $this->getResourceAccesses($resourceName);
-            $accesses = array();
-            foreach ($accessesCursor as $item) {
-                $accesses[] = $item;
-            }
-            if (empty($accesses)) $accesses[] = Resource::WILDCARD;
+        $accesses = $this->getValidatedAccesses($roleName, $resourceName, $access);
+        
+        foreach ($accesses as $accessName) {
+            $this->deleteAccess($roleName, $resourceName, $accessName);
         }
-        $this->allowOrDeny($roleName, $resourceName, $accesses, Acl::DENY);
+    }
+    
+    /**
+     * Retrieves existing ACL models with string names for non-existing.
+     * @param string $roleName
+     * @param string $resourceName
+     * @param mixed $access array or string
+     * @return array list of access names for a user
+     * @throws ResourceNotExistsException
+     * @throws RoleNotExistsException
+     * @throws Exception
+     */
+    protected function getValidatedAccesses($roleName, $resourceName, $access)
+    {
+        if (!$this->isRole($roleName)) {
+            throw new RoleNotExistsException($roleName);
+        }
+        if (!$this->isResource($resourceName)) {
+            throw new ResourceNotExistsException($resourceName);
+        }
+        
+        if (($resourceName === Resource::WILDCARD || $access === Resource::ACCESS_WILDCARD)
+            && !($resourceName === Resource::WILDCARD && $access === Resource::ACCESS_WILDCARD)) {
+            throw new Exception("Cannot create access to '{$access}' in '{$resourceName}' for role {$roleName}");
+        }
+        return is_array($access) ? $access : [$access];
+    }
+    
+    /**
+     * Removes existing ACL settings
+     * @param string $roleName
+     * @param string $resourceName
+     * @param string $accessName
+     */
+    protected function deleteAccess($roleName, $resourceName, $accessName)
+    {
+        $this->getCollection('accessList')->remove([
+            'roles_name'     => $roleName,
+            'resources_name' => $this->filterResourceName($resourceName),
+            'access_name'    => $accessName,
+        ]);
     }
 
     /**
@@ -630,102 +616,54 @@ class Mongo extends PhalconAdapter implements AdapterInterface
      *
      * @param  string $roleName
      * @param  string $resourceName
-     * @param string $accessDetails
+     * @param  string $accessName
      * @param  integer $action
      * @throws Exception
      * @return boolean
      */
-    protected function insertOrUpdateAccess($roleName, $resourceName, $accessDetails, $action)
+    protected function insertOrUpdateAccess($roleName, $resourceName, $accessName, $action)
     {
         $resourceName = $this->filterResourceName($resourceName);
-        if (!is_array($accessDetails)) {
-            $accessDetails = array(
-                'access_name' => $accessDetails,
-                'access_inherit' => ''
-            );
-        }
+        
+        $criteria = [
+            '$and' => [
+                ['resources_name' => $resourceName],
+                [
+                    '$or' => [
+                        ['access_name' => $accessName],
+                        ['access_inherit' => ['$in' => [$accessName]]]
+                    ]
+                ]
+            ]
+        ];
+        $fullCriteria = $criteria;
+        array_unshift($fullCriteria['$and'], ['roles_name' => $roleName]);
+        
         /**
          * Check if the access is valid in the resource
          */
-        $exists = $this->getCollection('resourcesAccesses')->count(array(
-            'resources_name' => $resourceName,
-            'access_name'    => $accessDetails['access_name']
-        ));
-        if (!$exists) {
-            throw new Exception(
-                "Access '{$accessDetails['access_name']}' does not exist in resource '{$resourceName}' in ACL"
-            );
+        $existingResourceAccess = $this->getCollection('resourcesAccesses')->findOne($criteria);
+        if (!$existingResourceAccess) {
+            throw new ResourceAccessNotExistsException($accessName, $resourceName);
         }
 
         $accessList = $this->getCollection('accessList');
 
-        $access = $accessList->findOne(array(
-            '$and' => array(
-                array('roles_name' => $roleName),
-                array('resources_name' => $resourceName),
-                array(
-                    '$or' => array(
-                        array('access_name' => $accessDetails['access_name']),
-                        array('inherit' => $accessDetails['access_name'])
-                    )
-                )
-            )
-        ));
+        $access = $accessList->findOne($fullCriteria);
         if (!$access) {
-            $accessList->insert(array(
+            $accessList->insert([
                 'roles_name'     => $roleName,
                 'resources_name' => $resourceName,
-                'access_name'    => $accessDetails['access_name'],
-                'inherit'        => $accessDetails['access_inherit'],
+                'access_name'    => $existingResourceAccess['access_name'],
+                'inherit'        => $existingResourceAccess['access_inherit'],
                 'allowed'        => $action
-            ));
+            ]);
         } else {
             $access['allowed'] = $action;
             $accessList->save($access);
         }
 
-        /**
-         * Update the access '*' in access_list
-         */
-        $exists = $accessList->count(array(
-            'roles_name'     => $roleName,
-            'resources_name' => $resourceName,
-            'access_name'    => Resource::WILDCARD
-        ));
-        if (!$exists) {
-            $accessList->insert(array(
-                'roles_name'     => $roleName,
-                'resources_name' => $resourceName,
-                'access_name'    => Resource::WILDCARD,
-                'allowed'        => $this->_defaultAccess
-            ));
-        }
-
         return true;
-    }
-
-    /**
-     * Inserts/Updates a permission in the access list
-     *
-     * @param  string $roleName
-     * @param  string $resourceName
-     * @param  string $accesses
-     * @param  integer $action
-     * @throws Exception
-     */
-    protected function allowOrDeny($roleName, $resourceName, $accesses, $action)
-    {
-
-        if (!$this->isRole($roleName)) {
-            throw new Exception('Role "' . $roleName . '" does not exist in the list');
-        }
-        if (is_array($accesses)) {
-            foreach ($accesses as $access) {
-                $this->insertOrUpdateAccess($roleName, $resourceName, $access, $action);
-            }
-        } else {
-            $this->insertOrUpdateAccess($roleName, $resourceName, $accesses, $action);
-        }
     }
 
     /**

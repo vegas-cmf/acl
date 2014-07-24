@@ -21,9 +21,14 @@ use \Phalcon\Acl\Resource as PhalconResource;
 class Resource extends PhalconResource
 {
     /**
-     * Reserved name of 'catch-all' access/name for specific resource
+     * Reserved name of 'catch-all' name for all resources
      */
-    const WILDCARD = '*';
+    const WILDCARD = 'all';
+    
+    /**
+     * Reserved name of 'catch-all' name for all resource accesses
+     */
+    const ACCESS_WILDCARD = '*';
 
     /**
      * @var array

@@ -11,8 +11,9 @@ class AddDefaultEntriesToAclTables extends AbstractMigration
     public function up()
     {
         $wildcard = Resource::WILDCARD;
+        $accessWildcard = Resource::ACCESS_WILDCARD;
         $this->query("INSERT INTO acl_resources (id, name, description) VALUES (1, '{$wildcard}', 'All in all (built-in)')");
-        $this->query("INSERT INTO acl_resources_accesses (id, name, description, acl_resource_id) VALUES (1, '{$wildcard}', 'All in all (built-in)', 1)");
+        $this->query("INSERT INTO acl_resources_accesses (id, name, description, acl_resource_id) VALUES (1, '{$accessWildcard}', 'All in all (built-in)', 1)");
     }
 
     /**
@@ -21,7 +22,8 @@ class AddDefaultEntriesToAclTables extends AbstractMigration
     public function down()
     {
         $wildcard = Resource::WILDCARD;
-        $this->query("DELETE FROM acl_resources_accesses WHERE name = '{$wildcard}'");
+        $accessWildcard = Resource::ACCESS_WILDCARD;
+        $this->query("DELETE FROM acl_resources_accesses WHERE name = '{$accessWildcard}'");
         $this->query("DELETE FROM acl_resources WHERE name = '{$wildcard}'");
     }
 }

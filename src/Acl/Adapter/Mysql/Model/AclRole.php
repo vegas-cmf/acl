@@ -57,7 +57,7 @@ class AclRole extends \Phalcon\Mvc\Model
     
     public function initialize()
     {
-        $this->hasMany("acl_role_id", "\Vegas\Security\Acl\Adapter\Mysql\Model\AclAccessList", "id", [
+        $this->hasMany("id", "\Vegas\Security\Acl\Adapter\Mysql\Model\AclAccessList", "acl_role_id", [
             'alias'  => AclAccessList::DEFAULT_ALIAS,
             'foreignKey' => [
                 'action' => Relation::ACTION_CASCADE

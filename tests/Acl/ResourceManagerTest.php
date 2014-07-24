@@ -39,27 +39,10 @@ class ResourceManagerTest extends \PHPUnit_Framework_TestCase
         );
     }
     
-    /**
-     * Clear all ACL settings before starting tests.
-     */
-    public static function setUpBeforeClass()
-    {
-        $mongo = DI::getDefault()->get('mongo');
-        $mongo->selectCollection('vegas_acl_roles')->remove();
-        $mongo->selectCollection('vegas_acl_resources')->remove();
-        $mongo->selectCollection('vegas_acl_access_list')->remove();
-        $mongo->selectCollection('vegas_acl_resources_accesses')->remove();
-    }
-    
     public function setUp()
     {
         $this->acl = DI::getDefault()->get('acl');
         $this->manager = $this->acl->getResourceManager();
-    }
-    
-    public function testConstructor()
-    {
-        $this->assertInstanceOf('\Vegas\Security\Acl\ResourceManager', $this->manager);
     }
     
     public function testCannotAddResourceWithEmptyName()
@@ -67,6 +50,7 @@ class ResourceManagerTest extends \PHPUnit_Framework_TestCase
         $name = '';
         try {
             $this->manager->add($name, 'Description of resource');
+            $this->fail('Exception not triggered');
         } catch (\Exception $e) {
             $this->assertInstanceOf('\Vegas\Security\Acl\Exception\InvalidResourceNameException', $e);
         }
@@ -111,6 +95,7 @@ class ResourceManagerTest extends \PHPUnit_Framework_TestCase
     {
         try {
             $this->manager->addAccess('NonExistingResource', 'whatever');
+            $this->fail('Exception not triggered');
         } catch (\Exception $e) {
             $this->assertInstanceOf('\Vegas\Security\Acl\Adapter\Exception', $e);
         }

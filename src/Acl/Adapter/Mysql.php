@@ -14,7 +14,6 @@ namespace Vegas\Security\Acl\Adapter;
 
 use Phalcon\Acl\Adapter as PhalconAdapter;
 use Phalcon\Acl;
-use Phalcon\DI;
 use Vegas\Security\Acl\Adapter\Exception\ResourceNotExistsException;
 use Vegas\Security\Acl\Adapter\Exception\RoleNotExistsException;
 use Vegas\Security\Acl\Adapter\Exception\ResourceAccessNotExistsException;
@@ -49,9 +48,6 @@ class Mysql extends PhalconAdapter implements AdapterInterface
                 'resourcesAccesses' =>  'vegas_acl_resources_accesses',
                 'accessList'        =>  'vegas_acl_access_list'
             );
-        }
-        if (!DI::getDefault()->get('modelsManager')) {
-            throw new Exception("Database connection has to be configured");
         }
         
         if (!is_array($options)) {
@@ -116,13 +112,6 @@ class Mysql extends PhalconAdapter implements AdapterInterface
                 'description'   => $role->getDescription(),
                 'removable'     => $role->isRemovable()
             ]);
-            $resource = $this->getResourceModel(Resource::WILDCARD);
-            (new AclAccessList)->create([
-                'acl_role_id'               => $roleModel->id,
-                'acl_resource_id'           => $resource->id,
-                'acl_resource_access_id'    => AclResourceAccess::findFirstByNameAndResource(Resource::WILDCARD, $resource)->id,
-                'allowed'                   => $this->_defaultAccess
-            ]);
         }
 
         if ($accessInherits) {
@@ -175,20 +164,17 @@ class Mysql extends PhalconAdapter implements AdapterInterface
         if (!($resource instanceof Resource)) {
             $resource = new Resource($resource);
         }
-
-        $currentResource = AclResource::findFirstByName($this->filterResourceName($resource->getName()));
-        $data = [
+        
+        try {
+            $resourceModel = $this->getResourceModel($resource->getName());            
+        } catch (ResourceNotExistsException $e) {
+            $resourceModel = new AclResource;            
+        }
+        $resourceModel->save([
                 'name'        => $this->filterResourceName($resource->getName()),
                 'description' => $resource->getDescription(),
                 'scope'       => $resource->getScope()
-            ];
-        
-        if (!$currentResource) {
-            (new AclResource())->save($data);
-            $this->addResourceAccess($resource->getName(), Resource::WILDCARD);
-        } else {
-            $currentResource->save($data);
-        }
+            ]);
 
         if ($accessList) {
             return $this->addResourceAccess($resource->getName(), $accessList);
@@ -207,16 +193,9 @@ class Mysql extends PhalconAdapter implements AdapterInterface
      */
     public function addResourceAccess($resourceName, $accessList)
     {
-        if (!$this->isResource($resourceName)) {
-            throw new Exception("Resource '{$resourceName}' does not exist in ACL");
-        }
-        $sanitizedResourceName = $this->filterResourceName($resourceName);
+        $resourceModel = $this->getResourceModel($resourceName);
         
-        if (is_string($accessList)) {
-            $accesses = [$accessList];
-        } else {
-            $accesses = $accessList;
-        }
+        $accesses = is_string($accessList) ?  [$accessList] : $accessList;
         
         foreach ($accesses as $access) {
             if (!is_array($access)) {
@@ -228,10 +207,10 @@ class Mysql extends PhalconAdapter implements AdapterInterface
             }
             
             try {
-                $this->getResourceAccessModel($access['name'], $sanitizedResourceName);
+                $this->getResourceAccessModel($access['name'], $resourceModel->name);
             } catch (ResourceAccessNotExistsException $e) {
                 (new AclResourceAccess)->create([
-                        'acl_resource_id' => AclResource::findFirstByName($sanitizedResourceName)->id,
+                        'acl_resource_id' => $resourceModel->id,
                         'name'    => $access['name'],
                         'description' => $access['description'],
                         'inherit' => empty($access['inherit']) ? null : $access['inherit']
@@ -259,11 +238,8 @@ class Mysql extends PhalconAdapter implements AdapterInterface
      */
     public function dropResourceAccess($resourceName, $accessList)
     {
-        if (is_string($accessList)) {
-            $accesses = [$accessList];
-        } else {
-            $accesses = $accessList;
-        }
+        $accesses = is_string($accessList) ?  [$accessList] : $accessList;
+        
         $sanitizedResourceName = $this->filterResourceName($resourceName);
 
         foreach ($accesses as $access) {
@@ -282,9 +258,9 @@ class Mysql extends PhalconAdapter implements AdapterInterface
      */
     protected function getResourceAccessModel($name, $resourceName)
     {
-        $model = AclResourceAccess::findFirstByNameAndResource($this->filterResourceName($name), $resourceName);
+        $model = AclResourceAccess::findFirstByNameAndResource($name, $this->filterResourceName($resourceName));
         if (!$model) {
-            throw new ResourceAccessNotExistsException();
+            throw new ResourceAccessNotExistsException($name, $resourceName);
         }
         return $model;
     }
@@ -310,7 +286,7 @@ class Mysql extends PhalconAdapter implements AdapterInterface
     public function getResource($name)
     {
         $resource = $this->getResourceModel($name);
-        $resourceObject = new Resource($resource->getName(), $resource->getDescription());
+        $resourceObject = new Resource($resource->name, $resource->description);
         $resourceObject->setAccesses($resource->getAccessesAsArray());
 
         return $resourceObject;
@@ -341,14 +317,13 @@ class Mysql extends PhalconAdapter implements AdapterInterface
     {
         $model = AclRole::findFirstByName($role);
         if (!$model) {
-            throw new RoleNotExistsException();
+            throw new RoleNotExistsException($role);
         }
         return $model;
     }
     
     /**
      * Gets role with all its accesses
-     * Skips wildcard (*) accesses
      * 
      * @param $role
      * @return \Vegas\Security\Acl\Role
@@ -364,9 +339,6 @@ class Mysql extends PhalconAdapter implements AdapterInterface
         $roleObject->setId($role->id);
         
         foreach ($role->getAccessLists() as $access) {
-            if ($access->getResourceAccess()->isWildcard()) {
-                continue;       //skip * accesses
-            }
             $roleObject->addAccess($access->toAccessArray());
         }
 
@@ -409,15 +381,7 @@ class Mysql extends PhalconAdapter implements AdapterInterface
         $resourceName = $this->filterResourceName($resourceName);
         $access = AclAccessList::findFirstByRoleResourceAndAccess($role, $resourceName, $access);
         if ($access instanceof AclAccessList) {
-            return (bool) $access->allowed;
-        }
-
-        /**
-         * Check if there is an common rule for that resource
-         */
-        $access = AclAccessList::findFirstByRoleResourceAndAccess($role, $resourceName, Resource::WILDCARD);
-        if ($access instanceof AclAccessList) {
-            return (bool) $access->allowed;
+            return $access->allowed ? Acl::ALLOW : Acl::DENY;
         }
 
         return $this->_defaultAccess;
@@ -447,132 +411,99 @@ class Mysql extends PhalconAdapter implements AdapterInterface
     
     /**
      * {@inheritdoc}
-     * You can use '*' as wildcard
      * Example:
      * <code>
      * //Allow access to guests to search on customers
      * $acl->allow('guests', 'customers', 'search');
      * //Allow access to guests to search or create on customers
      * $acl->allow('guests', 'customers', array('search', 'create'));
-     * //Allow access to any role to browse on products
-     * $acl->allow('*', 'products', 'browse');
-     * //Allow access to any role to browse on any resource
-     * $acl->allow('*', '*', 'browse');
+     * //Allow admin access to role
+     * $acl->allow('admins', 'all', '*');
      * </code>
      *
      * @param string $roleName
      * @param string $resourceName
      * @param mixed  $access
+     * @throws RoleNotExistsException
+     * @throws ResourceNotExistsException
+     * @throws Exception
      */
-    public function allow($roleName, $resourceName, $access = Resource::WILDCARD)
+    public function allow($roleName, $resourceName, $access)
     {
-        $this->allowOrDeny($roleName, $resourceName, $access, Acl::ALLOW);
+        $roleModel = $this->getRoleModel($roleName);
+        $resourceModel = $this->getResourceModel($resourceName);
+        
+        $acls = $this->getValidatedAclModels($roleName, $resourceName, $access);
+        
+        foreach ($acls as $acl) {
+            
+            if ($acl instanceof AclAccessList) {
+                $acl->save(['allowed' => Acl::ALLOW]);
+                continue;
+            }
+            
+            $accessModel = $this->getResourceAccessModel($acl, $resourceName);
+            (new AclAccessList())->create([
+                'acl_role_id'            => $roleModel->id,
+                'acl_resource_id'        => $resourceModel->id,
+                'acl_resource_access_id' => $accessModel->id,
+                'allowed'                => Acl::ALLOW
+            ]);
+        }
     }
 
     /**
      * {@inheritdoc}
-     * You can use '*' as wildcard
      * Example:
      * <code>
      * //Deny access to guests to search on customers
      * $acl->deny('guests', 'customers', 'search');
      * //Deny access to guests to search or create on customers
      * $acl->deny('guests', 'customers', array('search', 'create'));
-     * //Deny access to any role to browse on products
-     * $acl->deny('*', 'products', 'browse');
-     * //Deny access to any role to browse on any resource
-     * $acl->deny('*', '*', 'browse');
+     * //Remove admin access to role
+     * $acl->deny('admins', 'all', '*');
      * </code>
      *
      * @param  string  $roleName
      * @param  string  $resourceName
      * @param  mixed   $access
-     */
-    public function deny($roleName, $resourceName, $access = Resource::WILDCARD)
-    {
-        $this->allowOrDeny($roleName, $resourceName, $access, Acl::DENY);
-    }
-
-    /**
-     * Inserts/Updates a permission in the access list
-     *
-     * @param  string $roleName
-     * @param  string $resourceName
-     * @param  string $access
-     * @param  integer $action
+     * @throws RoleNotExistsException
+     * @throws ResourceNotExistsException
      * @throws Exception
      */
-    protected function allowOrDeny($roleName, $resourceName, $access, $action)
+    public function deny($roleName, $resourceName, $access)
     {
-        if (!$this->isRole($roleName)) {
-            throw new Exception("Role '{$roleName}' does not exist in the list");
+        $this->getRoleModel($roleName);
+        $this->getResourceModel($resourceName);
+        
+        $acls = $this->getValidatedAclModels($roleName, $resourceName, $access);
+        
+        foreach ($acls as $acl) {
+            ($acl instanceof AclAccessList) && $acl->delete();
         }
-        
-        $roleModel = $this->getRoleModel($roleName);
-        $resourceModel = $this->getResourceModel($resourceName);
-        
+    }
+    
+    /**
+     * Retrieves existing ACL models with string names for non-existing.
+     * @param string $roleName
+     * @param string $resourceName
+     * @param mixed $access array or string
+     * @return AclAccessList[] array with AclAccessList models or string names on non-existing ACLs
+     * @throws Exception
+     */
+    protected function getValidatedAclModels($roleName, $resourceName, $access)
+    {        
+        if (($resourceName === Resource::WILDCARD || $access === Resource::ACCESS_WILDCARD)
+            && !($resourceName === Resource::WILDCARD && $access === Resource::ACCESS_WILDCARD)) {
+            throw new Exception("Cannot create access to '{$access}' in '{$resourceName}' for role {$roleName}");
+        }
         $accesses = is_array($access) ? $access : [$access];
-        if (is_string($access) && $access == Resource::WILDCARD) {
-            $accesses = $resourceModel->getResourceAccessesWithoutWildcard();
-        } else {
-            $accesses = array_map(function($name) use ($resourceModel) {
-                return AclResourceAccess::findFirstByNameAndResource($name, (string)$resourceModel);
-            }, $accesses);
-        }
-        empty($accesses) && array_push($accesses, AclResourceAccess::findFirstByNameAndResource(Resource::WILDCARD, (string)$resourceModel));
         
-        foreach ($accesses as $accessModel) {
-            $this->insertOrUpdateAccess($roleModel, $resourceModel, $accessModel, $action);
-        }
-    }
-
-    /**
-     * Inserts/Updates a permission in the access list
-     *
-     * @param  AclRole $role
-     * @param  AclResource $resource
-     * @param  AclResourceAccess $accessDetails
-     * @param  Acl $action
-     * @throws Exception
-     */
-    protected function insertOrUpdateAccess(AclRole $role, AclResource $resource, AclResourceAccess $accessDetails, $action)
-    {
-        /**
-         * Check if the access is valid in the resource
-         */
-        $exists = AclResourceAccess::findFirstByNameAndResource((string)$accessDetails, (string)$resource);
-        if (!$exists) {
-            throw new Exception(
-                "Access '{$accessDetails}' does not exist in resource '{$resource}' in ACL"
-            );
-        }
-        
-        $access = AclAccessList::findFirstByRoleResourceAndAccess((string)$role, (string)$resource, (string)$accessDetails);
-        
-        if (!$access) {
-            $access = new AclAccessList();
-            $data = [
-                'acl_role_id'            => $role->id,
-                'acl_resource_id'        => $resource->id,
-                'acl_resource_access_id' => $accessDetails->id,
-                'allowed'                => $action
-            ];
-        } else {
-            $data = ['allowed' => $action];
-        }
-        $access->save($data);
-
-        /**
-         * Update the access '*' in access_list
-         */
-        $exists = AclAccessList::findFirstByRoleResourceAndAccess((string)$role, (string)$resource, Resource::WILDCARD);
-        $exists || (new AclAccessList)->create([
-                'acl_role_id'            => $role->id,
-                'acl_resource_id'        => $resource->id,
-                'acl_resource_access_id' => AclResourceAccess::findFirstByNameAndResource(Resource::WILDCARD, (string)$resource)->id,
-                'allowed'                => $this->_defaultAccess
-            ]);
-
+        $sanitizedResourceName = $this->filterResourceName($resourceName);
+        return array_map(function($accessName) use ($roleName, $sanitizedResourceName) {
+            $acl = AclAccessList::findFirstByRoleResourceAndAccess($roleName, $sanitizedResourceName, $accessName);
+            return $acl ? $acl : $accessName;
+        }, $accesses);
     }
 
     /**

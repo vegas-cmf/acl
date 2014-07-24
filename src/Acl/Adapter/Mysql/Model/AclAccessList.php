@@ -119,13 +119,14 @@ class AclAccessList extends \Phalcon\Mvc\Model
                         [{$accessAlias}].name = :access: OR [{$accessAlias}].inherit = :access:
                     )
                     ")
-                ->orWhere("[{$roleAlias}].name = :role: AND [{$resourceAlias}].name = :all:")
+                ->orWhere("[{$roleAlias}].name = :role: AND [{$accessAlias}].name = :wildcard: AND [{$resourceAlias}].name = :all:")
                 //->orderBy("[{$accessAlias}].name DESC, [{$resourceAlias}].name DESC")
                 ->getQuery()
                     ->execute([
                             'role'      => $role,
                             'resource'  => $resource,
                             'access'    => $access,
+                            'wildcard'  => Resource::ACCESS_WILDCARD,
                             'all'       => Resource::WILDCARD
                         ])
                     ->getFirst();

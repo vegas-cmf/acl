@@ -36,11 +36,11 @@ return array(
     ),
     
     'acl' => array(
-        'all'   =>  array(
+        \Vegas\Security\Acl\Resource::WILDCARD   =>  array(
             'description'   =>  'All privileges (for super admin)',
             'accessList'    =>  array(
                 array(
-                    'name'  =>  '*',
+                    'name'  => \Vegas\Security\Acl\Resource::ACCESS_WILDCARD,
                     'description' => 'All',
                     'inherit' => ''
                 )
