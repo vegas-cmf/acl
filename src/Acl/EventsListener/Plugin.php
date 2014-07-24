@@ -32,18 +32,11 @@ class Plugin extends UserPlugin
      */
     public function beforeExecuteRoute(Event $event, Dispatcher $dispatcher)
     {
-        $authentication = $this->ensureAuthentication();
-        if ($authentication) {
-            $role = $authentication->getIdentity()->getRole();
-        } else {
-            $role = Role::GUEST;
-        }
         $resource = $this->getResourceName($dispatcher);
         $access = $dispatcher->getActionName();
-        $allowed = $this->di->get('acl')->isAllowed($role, $resource, $access);
-        if ($allowed != Acl::ALLOW) {
+
+        if (!$this->isAllowedAccess($resource, $access)) {
             $ex = new NotAllowedException();
-            $ex->appendToMessage(' / Role: '.$role);
             $ex->appendToMessage(' / Resource: '.$resource);
             $ex->appendToMessage(' / Access: '.$access);
 
@@ -52,29 +45,64 @@ class Plugin extends UserPlugin
     }
 
     /**
-     * @return bool|object
+     * @param string $resource - resource name
+     * @param string $access - access name
+     * @return bool
      */
-    protected function ensureAuthentication()
+    protected function isAllowedAccess($resource, $access)
+    {
+        $isAllowed = false;
+
+        foreach ($this->getAuthenticationScopes() As $scope) {
+            $authentication = $this->ensureAuthentication($scope);
+
+            if ($authentication) {
+                $role = $authentication->getIdentity()->getRole();
+            } else {
+                $role = Role::GUEST;
+            }
+
+            $allowed = $this->di->get('acl')->isAllowed($role, $resource, $access);
+
+            if ($allowed == Acl::ALLOW) {
+                $isAllowed = true;
+            }
+        }
+
+        return $isAllowed;
+    }
+
+    /**
+     * Return array of all used authentication scopes for current route.
+     *
+     * @return array
+     */
+    protected function getAuthenticationScopes()
     {
         $matchedRoute = $this->router->getMatchedRoute();
         $paths = $matchedRoute->getPaths();
 
-        if (!isset($paths['auth'])) {
-            //authentication is disabled by default
-            $authSessionKey = false;
-        } else {
-            $authSessionKey = $paths['auth'];
+        if (empty($paths['auth'])) {
+            return array();
         }
 
-        if (!$authSessionKey) {
+        if (is_array($paths['auth'])) {
+            return $paths['auth'];
+        }
+
+        return array($paths['auth']);
+    }
+
+    /**
+     * @return bool|object
+     */
+    protected function ensureAuthentication($scope)
+    {
+        if (!$this->getDI()->has($scope)) {
             return false;
         }
 
-        if (!$this->getDI()->has($authSessionKey)) {
-            return false;
-        }
-
-        return $this->getDI()->get($authSessionKey);
+        return $this->getDI()->get($scope);
     }
 
     /**
