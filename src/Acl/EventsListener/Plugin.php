@@ -9,7 +9,6 @@
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
  */
-
 namespace Vegas\Security\Acl\EventsListener;
 
 use Phalcon\Events\Event,
@@ -35,13 +34,17 @@ class Plugin extends UserPlugin
         $resource = $this->getResourceName($dispatcher);
         $access = $dispatcher->getActionName();
 
-        if (!$this->isAllowedAccess($resource, $access)) {
+        $isAllowed = $this->isAllowedAccess($resource, $access);
+
+        if (!$isAllowed) {
             $ex = new NotAllowedException();
             $ex->appendToMessage(' / Resource: '.$resource);
             $ex->appendToMessage(' / Access: '.$access);
 
             $this->dispatcher->getEventsManager()->fire('dispatch:beforeException', $this->dispatcher, $ex);
         }
+
+        return $isAllowed;
     }
 
     /**
