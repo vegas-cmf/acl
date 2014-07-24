@@ -51,9 +51,12 @@ class Plugin extends UserPlugin
      */
     protected function isAllowedAccess($resource, $access)
     {
-        $isAllowed = false;
-
         foreach ($this->getAuthenticationScopes() As $scope) {
+            if ($scope === false) {
+                // no auth access
+                return true;
+            }
+
             $authentication = $this->ensureAuthentication($scope);
 
             if ($authentication) {
@@ -65,11 +68,11 @@ class Plugin extends UserPlugin
             $allowed = $this->di->get('acl')->isAllowed($role, $resource, $access);
 
             if ($allowed == Acl::ALLOW) {
-                $isAllowed = true;
+                return true;
             }
         }
 
-        return $isAllowed;
+        return false;
     }
 
     /**
@@ -83,7 +86,7 @@ class Plugin extends UserPlugin
         $paths = $matchedRoute->getPaths();
 
         if (empty($paths['auth'])) {
-            return array();
+            return array(false);
         }
 
         if (is_array($paths['auth'])) {
