@@ -9,7 +9,6 @@
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
  */
-
 namespace Vegas\Security\Acl\EventsListener;
 
 use Phalcon\Events\Event,
@@ -32,49 +31,84 @@ class Plugin extends UserPlugin
      */
     public function beforeExecuteRoute(Event $event, Dispatcher $dispatcher)
     {
-        $authentication = $this->ensureAuthentication();
-        if ($authentication) {
-            $role = $authentication->getIdentity()->getRole();
-        } else {
-            $role = Role::GUEST;
-        }
         $resource = $this->getResourceName($dispatcher);
         $access = $dispatcher->getActionName();
-        $allowed = $this->di->get('acl')->isAllowed($role, $resource, $access);
-        if ($allowed != Acl::ALLOW) {
+
+        $isAllowed = $this->isAllowedAccess($resource, $access);
+
+        if (!$isAllowed) {
             $ex = new NotAllowedException();
-            $ex->appendToMessage(' / Role: '.$role);
             $ex->appendToMessage(' / Resource: '.$resource);
             $ex->appendToMessage(' / Access: '.$access);
 
             $this->dispatcher->getEventsManager()->fire('dispatch:beforeException', $this->dispatcher, $ex);
         }
+
+        return $isAllowed;
+    }
+
+    /**
+     * @param string $resource - resource name
+     * @param string $access - access name
+     * @return bool
+     */
+    protected function isAllowedAccess($resource, $access)
+    {
+        foreach ($this->getAuthenticationScopes() As $scope) {
+            if ($scope === false) {
+                // no auth access
+                return true;
+            }
+
+            $authentication = $this->ensureAuthentication($scope);
+
+            if ($authentication) {
+                $role = $authentication->getIdentity()->getRole();
+            } else {
+                $role = Role::GUEST;
+            }
+
+            $allowed = $this->di->get('acl')->isAllowed($role, $resource, $access);
+
+            if ($allowed == Acl::ALLOW) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Return array of all used authentication scopes for current route.
+     *
+     * @return array
+     */
+    protected function getAuthenticationScopes()
+    {
+        $matchedRoute = $this->router->getMatchedRoute();
+        $paths = $matchedRoute->getPaths();
+
+        if (empty($paths['auth'])) {
+            return array(false);
+        }
+
+        if (is_array($paths['auth'])) {
+            return $paths['auth'];
+        }
+
+        return array($paths['auth']);
     }
 
     /**
      * @return bool|object
      */
-    protected function ensureAuthentication()
+    protected function ensureAuthentication($scope)
     {
-        $matchedRoute = $this->router->getMatchedRoute();
-        $paths = $matchedRoute->getPaths();
-
-        if (!isset($paths['auth'])) {
-            //authentication is disabled by default
-            $authSessionKey = false;
-        } else {
-            $authSessionKey = $paths['auth'];
-        }
-
-        if (!$authSessionKey) {
+        if (!$this->getDI()->has($scope)) {
             return false;
         }
 
-        if (!$this->getDI()->has($authSessionKey)) {
-            return false;
-        }
-
-        return $this->getDI()->get($authSessionKey);
+        return $this->getDI()->get($scope);
     }
 
     /**
