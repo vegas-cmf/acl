@@ -92,8 +92,9 @@ class Plugin extends UserPlugin
             return array(false);
         }
 
-        if (is_array($paths['auth'])) {
-            return $paths['auth'];
+        $auth = json_decode($paths['auth']);
+        if (is_array($auth)) {
+            return $auth;
         }
 
         return array($paths['auth']);
