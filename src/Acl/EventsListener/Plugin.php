@@ -11,10 +11,10 @@
  */
 namespace Vegas\Security\Acl\EventsListener;
 
-use Phalcon\Events\Event,
-    Phalcon\Mvc\User\Plugin as UserPlugin,
-    Phalcon\Mvc\Dispatcher,
-    Phalcon\Acl;
+use Phalcon\Events\Event;
+use Phalcon\Mvc\User\Plugin as UserPlugin;
+use Phalcon\Mvc\Dispatcher;
+use Phalcon\Acl;
 use Vegas\Security\Acl\Exception\NotAllowedException;
 use Vegas\Security\Acl\Role;
 
@@ -24,6 +24,8 @@ use Vegas\Security\Acl\Role;
  */
 class Plugin extends UserPlugin
 {
+    protected $scope = null;
+
     /**
      * @param Event $event
      * @param Dispatcher $dispatcher
@@ -55,6 +57,8 @@ class Plugin extends UserPlugin
     protected function isAllowedAccess($resource, $access)
     {
         foreach ($this->getAuthenticationScopes() As $scope) {
+            $this->scope = $scope;
+
             if ($scope === false) {
                 // no auth access
                 return true;
@@ -122,5 +126,13 @@ class Plugin extends UserPlugin
         $controller = $dispatcher->getControllerName();
 
         return sprintf('mvc:%s:%s', lcfirst($module), str_replace('\\', '-', $controller));
+    }
+
+    /**
+     * @return string|null|false current scope name
+     */
+    public function getCurrentScopeName()
+    {
+        return $this->scope;
     }
 } 
