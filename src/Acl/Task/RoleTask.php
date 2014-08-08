@@ -8,7 +8,7 @@
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
- */ 
+ */
 
 namespace Vegas\Security\Acl\Task;
 
@@ -33,17 +33,17 @@ class RoleTask extends \Vegas\Cli\Task
             'description'   =>  'All privileges (for super admin)',
             'accessList'    =>  array(
                 array(
-                    'name'  =>  Resource::WILDCARD,
+                    'name'  =>  Resource::ACCESS_WILDCARD,
                     'description' => 'All',
                     'inherit' => ''
                 )
             )
         )
     );
-    
+
     /**
      * Shorthand method to retrieve valid ACL instance from DI container.
-     * 
+     *
      * @return \Vegas\Security\Acl
      */
     private function getAcl()
@@ -126,7 +126,7 @@ class RoleTask extends \Vegas\Cli\Task
 
         $roleManager->add(UserRole::DEFAULT_ROLE_GUEST, 'Not authenticated user', true);
         $roleManager->add(UserRole::SUPER_ADMIN, 'Super administrator with all privileges', true);
-        $acl->allow(UserRole::SUPER_ADMIN, 'all', Resource::ACCESS_WILDCARD);
+        $acl->allow(UserRole::SUPER_ADMIN, Resource::WILDCARD, Resource::ACCESS_WILDCARD);
 
         $this->putText('Success.');
     }
