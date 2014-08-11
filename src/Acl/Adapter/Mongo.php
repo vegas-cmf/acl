@@ -497,7 +497,7 @@ class Mongo extends PhalconAdapter implements AdapterInterface
                         [
                             '$or' => [
                                 ['access_name' => $accessName],
-                                ['access_inherit' => ['$in' => [$accessName]]]
+                                ['inherit' => ['$in' => [$accessName]]]
                             ]
                         ]
                     ]
@@ -513,7 +513,7 @@ class Mongo extends PhalconAdapter implements AdapterInterface
             ]
         ]);
         if (is_array($access)) {
-            return Acl::ALLOW;
+            return $access['allowed'] ? Acl::ALLOW : Acl::DENY;
         }
 
         return $this->_defaultAccess;
