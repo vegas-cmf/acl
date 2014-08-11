@@ -513,7 +513,7 @@ class Mongo extends PhalconAdapter implements AdapterInterface
             ]
         ]);
         if (is_array($access)) {
-            return $access['allowed'] ? Acl::ALLOW : Acl::DENY;
+            return Acl::ALLOW;
         }
 
         return $this->_defaultAccess;
