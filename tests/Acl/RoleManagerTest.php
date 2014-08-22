@@ -90,7 +90,7 @@ class RoleManagerTest extends \PHPUnit_Framework_TestCase
             $this->manager->getRole('NonExistingRole');
             $this->fail('Exception not triggered');
         } catch (\Exception $e) {
-            $this->assertInstanceOf('\Vegas\Security\Acl\Adapter\Exception\RoleNotExistsException', $e);
+            $this->assertInstanceOf('\Vegas\Security\Acl\Adapter\Exception\RoleDoesNotExistException', $e);
         }
     }
     
@@ -101,7 +101,7 @@ class RoleManagerTest extends \PHPUnit_Framework_TestCase
             $this->manager->dropRole('NonExistingRole');
             $this->fail('Exception not triggered');
         } catch (\Exception $e) {
-            $this->assertInstanceOf('\Vegas\Security\Acl\Adapter\Exception\RoleNotExistsException', $e);
+            $this->assertInstanceOf('\Vegas\Security\Acl\Adapter\Exception\RoleDoesNotExistException', $e);
         }
     }
     

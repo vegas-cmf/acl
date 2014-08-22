@@ -47,9 +47,9 @@ class Role extends PhalconRole
     protected $id;
     
     /**
-     * @param $access
+     * @param array $access
      */
-    public function addAccess($access)
+    public function addAccess(array $access)
     {
         $resourceName = $access['resources_name'];
         if (!isset($this->accessList[$resourceName])) {
@@ -61,7 +61,7 @@ class Role extends PhalconRole
     /**
      * @param $accessList
      */
-    public function setAccessList($accessList)
+    public function setAccessList(array $accessList)
     {
         $this->accessList = [];
         foreach ($accessList as $access) {

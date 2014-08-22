@@ -15,7 +15,7 @@ namespace Vegas\Security\Acl\Adapter;
 use Phalcon\Acl\Adapter as PhalconAdapter;
 use Phalcon\Acl;
 use Vegas\Security\Acl\Adapter\Exception\ResourceNotExistsException;
-use Vegas\Security\Acl\Adapter\Exception\RoleNotExistsException;
+use Vegas\Security\Acl\Adapter\Exception\RoleDoesNotExistException;
 use Vegas\Security\Acl\Adapter\Exception\ResourceAccessNotExistsException;
 use Vegas\Security\Acl\Role;
 use Vegas\Security\Acl\Resource;
@@ -104,7 +104,7 @@ class Mysql extends PhalconAdapter implements AdapterInterface
         try {
             $this->getRole($role->getName());
             
-        } catch (RoleNotExistsException $e) {
+        } catch (RoleDoesNotExistException $e) {
             
             $roleModel = new AclRole;
             $roleModel->create([
@@ -310,15 +310,16 @@ class Mysql extends PhalconAdapter implements AdapterInterface
     
     /**
      * @param $role
-     * @throws Exception\RoleNotExistsException
+     * @throws Exception\RoleDoesNotExistException
      * @return AclRole
      */
     protected function getRoleModel($role)
     {
         $model = AclRole::findFirstByName($role);
         if (!$model) {
-            throw new RoleNotExistsException($role);
+            throw new RoleDoesNotExistException($role);
         }
+
         return $model;
     }
     
@@ -424,7 +425,7 @@ class Mysql extends PhalconAdapter implements AdapterInterface
      * @param string $roleName
      * @param string $resourceName
      * @param mixed  $access
-     * @throws RoleNotExistsException
+     * @throws RoleDoesNotExistException
      * @throws ResourceNotExistsException
      * @throws Exception
      */
@@ -467,7 +468,7 @@ class Mysql extends PhalconAdapter implements AdapterInterface
      * @param  string  $roleName
      * @param  string  $resourceName
      * @param  mixed   $access
-     * @throws RoleNotExistsException
+     * @throws RoleDoesNotExistException
      * @throws ResourceNotExistsException
      * @throws Exception
      */

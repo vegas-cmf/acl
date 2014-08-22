@@ -16,7 +16,7 @@ use Phalcon\Acl\Adapter as PhalconAdapter,
     Phalcon\Acl,
     Phalcon\DI;
 use Vegas\Security\Acl\Adapter\Exception\ResourceNotExistsException,
-    Vegas\Security\Acl\Adapter\Exception\RoleNotExistsException,
+    Vegas\Security\Acl\Adapter\Exception\RoleDoesNotExistException,
     Vegas\Security\Acl\Adapter\Exception\ResourceAccessNotExistsException,
     Vegas\Security\Acl\Role,
     Vegas\Security\Acl\Resource;
@@ -96,14 +96,16 @@ class Mongo extends PhalconAdapter implements AdapterInterface
      */
     public function addRole($role, $accessInherits = null)
     {
-        if (!is_object($role)) {
+        if (!($role instanceof Role)) {
             $role = new Role($role, '');
         }
 
-        $roles = $this->getCollection('roles');
-        $exists = $roles->count(array('name' => $role->getName()));
+        try {
+            $role = $this->getRole((string)$role, $accessInherits);
 
-        if (!$exists) {
+        } catch (RoleDoesNotExistException $e) {
+
+            $roles = $this->getCollection('roles');
             $roles->insert(array(
                 'name'        => $role->getName(),
                 'description' => $role->getDescription(),
@@ -138,23 +140,29 @@ class Mongo extends PhalconAdapter implements AdapterInterface
 
     /**
      * @param $role
-     * @throws Exception\RoleNotExistsException
+     * @throws Exception\RoleDoesNotExistException
      * @return array|null
      */
     public function getRole($role)
     {
-        if (!isset($role['_id'])) {
-            $role = $this->getCollection('roles')->findOne(array('name' => $role));
-        }
-        if (!$role) {
-            throw new RoleNotExistsException($role);
-        }
-        $accessList = $this->getRoleAccesses($role['name']);
+        if (!($role instanceof Role)) {
 
+            $roleName = gettype($role) === 'array'
+                ? $role['name']
+                : (string)$role;
+
+            $role = $this->getCollection('roles')->findOne(array('name' => (string)$roleName));
+        }
+
+        if (!$role) {
+            throw new RoleDoesNotExistException($role);
+        }
+
+        $accessList = $this->getRoleAccesses($role['name']);
         $roleObject = new Role($role['name'], $role['description']);
         $roleObject->setRemovable($role['removable']);
         $roleObject->setId($role['_id']);
-        $roleObject->setAccessList($accessList);
+        $roleObject->setAccessList((array)$accessList);
 
         return $roleObject;
     }
@@ -196,20 +204,20 @@ class Mongo extends PhalconAdapter implements AdapterInterface
      * @param $roleName
      * @return mixed
      */
-    public function clearRoleAccesses($roleName)
+    public function clearRoleAccesses($roleName, $test = 0)
     {
         return $this->getCollection('accessList')->remove(array('roles_name' => $roleName));
     }
 
     /**
      * @param $roleName
-     * @throws Exception\RoleNotExistsException
+     * @throws Exception\RoleDoesNotExistException
      */
     public function dropRole($roleName)
     {
         $role = $this->getRole($roleName);
         if (!$role) {
-            throw new RoleNotExistsException($roleName);
+            throw new RoleDoesNotExistException($roleName);
         }
 
         //removes role
@@ -232,8 +240,10 @@ class Mongo extends PhalconAdapter implements AdapterInterface
     {
         //finds role and role's access list
         $role = $this->getRole($roleToInherit);
-        foreach ($role['accessList'] as $accessList) {
-            if ($accessList['allowed']) {
+//        var_dump($role->getAccessList());die;
+        foreach ($role->getAccessList() as $accessList) {
+
+            if ($accessList->isAccessAllowed()) {
                 $this->allow($roleName, $accessList['resources_name'], $accessList['access_name']);
             } else {
                 $this->deny($roleName, $accessList['resources_name'], $accessList['access_name']);
@@ -577,13 +587,13 @@ class Mongo extends PhalconAdapter implements AdapterInterface
      * @param mixed $access array or string
      * @return array list of access names for a user
      * @throws ResourceNotExistsException
-     * @throws RoleNotExistsException
+     * @throws RoleDoesNotExistException
      * @throws Exception
      */
     protected function getValidatedAccesses($roleName, $resourceName, $access)
     {
         if (!$this->isRole($roleName)) {
-            throw new RoleNotExistsException($roleName);
+            throw new RoleDoesNotExistException($roleName);
         }
         if (!$this->isResource($resourceName)) {
             throw new ResourceNotExistsException($resourceName);
