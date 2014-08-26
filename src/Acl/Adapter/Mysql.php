@@ -103,9 +103,8 @@ class Mysql extends PhalconAdapter implements AdapterInterface
 
         try {
             $this->getRole($role->getName());
-            
         } catch (RoleDoesNotExistException $e) {
-            
+
             $roleModel = new AclRole;
             $roleModel->create([
                 'name'          => $role->getName(),
@@ -131,7 +130,8 @@ class Mysql extends PhalconAdapter implements AdapterInterface
     public function addInherit($roleName, $roleToInherit)
     {
         //finds role model
-        $role = $this->getRoleModel($roleName);
+        $role = $this->getRoleModel($roleToInherit);
+
         foreach ($role->getAccessLists() as $accessList) {
             if ($accessList->allowed) {
                 $this->allow($roleName, $accessList->getResource(), $accessList->getResourceAccess());
@@ -326,7 +326,7 @@ class Mysql extends PhalconAdapter implements AdapterInterface
     /**
      * Gets role with all its accesses
      * 
-     * @param $role
+     * @param string $role
      * @return \Vegas\Security\Acl\Role
      */
     public function getRole($role)
@@ -335,7 +335,7 @@ class Mysql extends PhalconAdapter implements AdapterInterface
             $role = $this->getRoleModel($role);
         }
 
-        $roleObject = new Role($role, $role->description);
+        $roleObject = new Role($role->name, $role->description);
         $roleObject->setRemovable($role->removable);
         $roleObject->setId($role->id);
         
@@ -429,13 +429,13 @@ class Mysql extends PhalconAdapter implements AdapterInterface
      * @throws ResourceNotExistsException
      * @throws Exception
      */
-    public function allow($roleName, $resourceName, $access)
+    public function allow($roleName, $resourceName, $access, $test = 0)
     {
         $roleModel = $this->getRoleModel($roleName);
         $resourceModel = $this->getResourceModel($resourceName);
         
-        $acls = $this->getValidatedAclModels($roleName, $resourceName, $access);
-        
+        $acls = $this->getValidatedAclModels($roleName, $resourceName, $access, $test);
+
         foreach ($acls as $acl) {
             
             if ($acl instanceof AclAccessList) {
@@ -492,7 +492,7 @@ class Mysql extends PhalconAdapter implements AdapterInterface
      * @return AclAccessList[] array with AclAccessList models or string names on non-existing ACLs
      * @throws Exception
      */
-    protected function getValidatedAclModels($roleName, $resourceName, $access)
+    protected function getValidatedAclModels($roleName, $resourceName, $access, $test = 0)
     {        
         if (($resourceName === Resource::WILDCARD || $access === Resource::ACCESS_WILDCARD)
             && !($resourceName === Resource::WILDCARD && $access === Resource::ACCESS_WILDCARD)) {
@@ -501,8 +501,9 @@ class Mysql extends PhalconAdapter implements AdapterInterface
         $accesses = is_array($access) ? $access : [$access];
         
         $sanitizedResourceName = $this->filterResourceName($resourceName);
-        return array_map(function($accessName) use ($roleName, $sanitizedResourceName) {
-            $acl = AclAccessList::findFirstByRoleResourceAndAccess($roleName, $sanitizedResourceName, $accessName);
+
+        return array_map(function($accessName) use ($roleName, $sanitizedResourceName, $test) {
+            $acl = AclAccessList::findFirstByRoleResourceAndAccess($roleName, $sanitizedResourceName, $accessName, $test);
             return $acl ? $acl : $accessName;
         }, $accesses);
     }

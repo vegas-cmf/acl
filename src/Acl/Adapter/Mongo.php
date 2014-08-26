@@ -12,14 +12,14 @@
 
 namespace Vegas\Security\Acl\Adapter;
 
-use Phalcon\Acl\Adapter as PhalconAdapter,
+use Phalcon\DI,
     Phalcon\Acl,
-    Phalcon\DI;
-use Vegas\Security\Acl\Adapter\Exception\ResourceNotExistsException,
-    Vegas\Security\Acl\Adapter\Exception\RoleDoesNotExistException,
-    Vegas\Security\Acl\Adapter\Exception\ResourceAccessNotExistsException,
     Vegas\Security\Acl\Role,
-    Vegas\Security\Acl\Resource;
+    Vegas\Security\Acl\Resource,
+    Phalcon\Acl\Adapter as PhalconAdapter,
+    Vegas\Security\Acl\Adapter\Exception\ResourceNotExistsException,
+    Vegas\Security\Acl\Adapter\Exception\RoleDoesNotExistException,
+    Vegas\Security\Acl\Adapter\Exception\ResourceAccessNotExistsException;
 
 /**
  * @use \Phalcon\Acl\Adapter\Mongo
@@ -32,7 +32,7 @@ class Mongo extends PhalconAdapter implements AdapterInterface
 {
     /**
      * @param array $options
-     * @throws Exception
+     * @throws \Exception
      */
     public function __construct($options = array())
     {
@@ -101,7 +101,7 @@ class Mongo extends PhalconAdapter implements AdapterInterface
         }
 
         try {
-            $role = $this->getRole((string)$role, $accessInherits);
+            $role = $this->getRole((string)$role);
 
         } catch (RoleDoesNotExistException $e) {
 
@@ -139,23 +139,24 @@ class Mongo extends PhalconAdapter implements AdapterInterface
     }
 
     /**
-     * @param $role
+     * @param string|array $role
+     * @return \Vegas\Security\Acl\Role
      * @throws Exception\RoleDoesNotExistException
-     * @return array|null
      */
     public function getRole($role)
     {
-        if (!($role instanceof Role)) {
-
-            $roleName = gettype($role) === 'array'
-                ? $role['name']
-                : (string)$role;
-
-            $role = $this->getCollection('roles')->findOne(array('name' => (string)$roleName));
+        if ($role instanceof Role) {
+            return $role;
         }
 
+        $roleName = gettype($role) === 'array'
+            ? $role['name']
+            : $role;
+
+        $role = $this->getCollection('roles')->findOne(array('name' => $roleName));
+
         if (!$role) {
-            throw new RoleDoesNotExistException($role);
+            throw new RoleDoesNotExistException($roleName);
         }
 
         $accessList = $this->getRoleAccesses($role['name']);
@@ -163,8 +164,9 @@ class Mongo extends PhalconAdapter implements AdapterInterface
         $roleObject->setRemovable($role['removable']);
         $roleObject->setId($role['_id']);
         $roleObject->setAccessList((array)$accessList);
+        $role = $roleObject;
 
-        return $roleObject;
+        return $role;
     }
 
     /**
@@ -186,7 +188,7 @@ class Mongo extends PhalconAdapter implements AdapterInterface
 
 
     /**
-     * @param $roleName
+     * @param string $roleName
      * @return \MongoCursor
      */
     public function getRoleAccesses($roleName)
@@ -201,24 +203,20 @@ class Mongo extends PhalconAdapter implements AdapterInterface
     }
 
     /**
-     * @param $roleName
+     * @param string $roleName
      * @return mixed
      */
-    public function clearRoleAccesses($roleName, $test = 0)
+    public function clearRoleAccesses($roleName)
     {
         return $this->getCollection('accessList')->remove(array('roles_name' => $roleName));
     }
 
     /**
-     * @param $roleName
-     * @throws Exception\RoleDoesNotExistException
+     * @param string|array $roleName
      */
     public function dropRole($roleName)
     {
         $role = $this->getRole($roleName);
-        if (!$role) {
-            throw new RoleDoesNotExistException($roleName);
-        }
 
         //removes role
         $this->getCollection('roles')
@@ -240,14 +238,9 @@ class Mongo extends PhalconAdapter implements AdapterInterface
     {
         //finds role and role's access list
         $role = $this->getRole($roleToInherit);
-//        var_dump($role->getAccessList());die;
-        foreach ($role->getAccessList() as $accessList) {
 
-            if ($accessList->isAccessAllowed()) {
-                $this->allow($roleName, $accessList['resources_name'], $accessList['access_name']);
-            } else {
-                $this->deny($roleName, $accessList['resources_name'], $accessList['access_name']);
-            }
+        foreach ($role->getAccessList() as $resource => $access) {
+            $this->allow($roleName, $resource, $access);
         }
 
         return true;
@@ -256,7 +249,7 @@ class Mongo extends PhalconAdapter implements AdapterInterface
     /**
      * Removes modules namespace backslashes
      *
-     * @param $resourceName
+     * @param string $resourceName
      * @return string
      */
     private function filterResourceName($resourceName)
@@ -265,17 +258,19 @@ class Mongo extends PhalconAdapter implements AdapterInterface
     }
 
     /**
-     * @param $name
-     * @return array|null
+     * @param string $name
+     * @return Resource
      * @throws Exception\ResourceNotExistsException
      */
     public function getResource($name)
     {
         $name = $this->filterResourceName($name);
+
         $resource = $this->getCollection('resources')->findOne(array('name' => $name));
         if (!$resource) {
             throw new ResourceNotExistsException($name);
         }
+
         $accesses = $this->getResourceAccesses($resource['name']);
         $resourceObject = new Resource($resource['name'], $resource['description']);
         $resourceObject->setAccesses($accesses);
@@ -338,8 +333,8 @@ class Mongo extends PhalconAdapter implements AdapterInterface
      * $acl->addResource('customers', array('create', 'search'));
      * </code>
      *
-     * @param  \Phalcon\Acl\Resource $resource
-     * @param  array|string          $accessList
+     * @param  string|\Phalcon\Acl\Resource|string  $resource
+     * @param  array|string                         $accessList
      * @return boolean
      */
     public function addResource($resource, $accessList = null)
@@ -377,10 +372,10 @@ class Mongo extends PhalconAdapter implements AdapterInterface
     /**
      * {@inheritdoc}
      *
-     * @param  string                 $resourceName
-     * @param  array|string           $accessList
+     * @param  string       $resourceName
+     * @param  array|string $accessList
      * @return boolean
-     * @throws \Phalcon\Acl\Exception
+     * @throws Exception\ResourceNotExistsException
      */
     public function addResourceAccess($resourceName, $accessList)
     {
@@ -446,11 +441,7 @@ class Mongo extends PhalconAdapter implements AdapterInterface
      */
     public function dropResourceAccess($resourceName, $accessList)
     {
-        if (is_string($accessList)) {
-            $accesses = array($accessList);
-        } else {
-            $accesses = $accessList;
-        }
+        $accesses = is_string($accessList) ? array($accessList) : $accessList;
 
         foreach ($accesses as $access) {
             $this->getCollection('resourcesAccesses')
@@ -460,23 +451,20 @@ class Mongo extends PhalconAdapter implements AdapterInterface
     }
 
     /**
-     * @param $resourceName
-     * @throws Exception\ResourceNotExistsException
+     * @param string $resourceName
      */
     public function removeResource($resourceName)
     {
         $resource = $this->getResource($resourceName);
-        if (!$resource) {
-            throw new ResourceNotExistsException($resourceName);
-        }
+        $resourceName = $resource->getName();
 
         //removes resource
         $this->getCollection('resources')
-                        ->remove(array('name' => $resource['name']));
+            ->remove(array('name' => $resourceName));
 
         //removes resource accesses
         $this->getCollection('resourcesAccesses')
-                        ->remove(array('resources_name' => $resource['name']));
+            ->remove(array('resources_name' => $resourceName));
     }
 
     /**
@@ -548,7 +536,7 @@ class Mongo extends PhalconAdapter implements AdapterInterface
     public function allow($roleName, $resourceName, $access)
     {
         $accesses = $this->getValidatedAccesses($roleName, $resourceName, $access);
-        
+
         foreach ($accesses as $accessName) {
             $this->insertOrUpdateAccess($roleName, $resourceName, $accessName, Acl::ALLOW);
         }
@@ -586,9 +574,9 @@ class Mongo extends PhalconAdapter implements AdapterInterface
      * @param string $resourceName
      * @param mixed $access array or string
      * @return array list of access names for a user
-     * @throws ResourceNotExistsException
-     * @throws RoleDoesNotExistException
-     * @throws Exception
+     * @throws Exception\ResourceNotExistsException
+     * @throws Exception\RoleDoesNotExistException
+     * @throws \Exception
      */
     protected function getValidatedAccesses($roleName, $resourceName, $access)
     {
@@ -598,12 +586,16 @@ class Mongo extends PhalconAdapter implements AdapterInterface
         if (!$this->isResource($resourceName)) {
             throw new ResourceNotExistsException($resourceName);
         }
-        
+
+        $isAccessList = is_array($access);
+
         if (($resourceName === Resource::WILDCARD || $access === Resource::ACCESS_WILDCARD)
             && !($resourceName === Resource::WILDCARD && $access === Resource::ACCESS_WILDCARD)) {
-            throw new Exception("Cannot create access to '{$access}' in '{$resourceName}' for role {$roleName}");
+
+            $accessName = $isAccessList ? implode(', ', $access) : $access;
+            throw new Exception("Cannot create access to '{$accessName}' in '{$resourceName}' for role {$roleName}");
         }
-        return is_array($access) ? $access : [$access];
+        return $isAccessList ? $access : [$access];
     }
     
     /**
@@ -628,8 +620,9 @@ class Mongo extends PhalconAdapter implements AdapterInterface
      * @param  string $resourceName
      * @param  string $accessName
      * @param  integer $action
-     * @throws Exception
+     * @throws \Exception
      * @return boolean
+     * @throws Exception\ResourceAccessNotExistsException
      */
     protected function insertOrUpdateAccess($roleName, $resourceName, $accessName, $action)
     {
@@ -648,7 +641,7 @@ class Mongo extends PhalconAdapter implements AdapterInterface
         ];
         $fullCriteria = $criteria;
         array_unshift($fullCriteria['$and'], ['roles_name' => $roleName]);
-        
+
         /**
          * Check if the access is valid in the resource
          */
@@ -668,7 +661,7 @@ class Mongo extends PhalconAdapter implements AdapterInterface
                 'inherit'        => $existingResourceAccess['access_inherit'],
                 'allowed'        => $action
             ]);
-        } else {
+        } elseif (!isset($access['allowed'])) {
             $access['allowed'] = $action;
             $accessList->save($access);
         }

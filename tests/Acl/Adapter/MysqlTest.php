@@ -132,13 +132,16 @@ class MysqlTest extends \PHPUnit_Framework_TestCase
         $allowedActions = ['index', 'edit'];
         
         $this->adapter->addRole($name);
-        
+
         $resourceName = 'TestResource';
         $return = $this->adapter->addResourceAccess($resourceName, $allowedActions);
         $this->assertTrue($return);
         
         $this->adapter->deny($name, $resourceName, 'index');
         $this->adapter->allow($name, $resourceName, $allowedActions);
+
+        $accessList = $this->adapter->getRole($name)->getAccessList();
+        $this->assertCount(2, $accessList[$resourceName]);
     }
     
     /**
@@ -147,15 +150,24 @@ class MysqlTest extends \PHPUnit_Framework_TestCase
     public function testAddInheritedRoleUsingName()
     {
         $name = 'InheritedTestRole';
-        $inherited = 'TestRoleWithResources';        
-        
+        $inherited = 'TestRoleWithResources';
+        $resourceName = 'TestResource';
+
         $this->assertTrue($this->adapter->isRole($inherited));
         $this->assertFalse($this->adapter->isRole($name));
-        $result = $this->adapter->addRole($name, $inherited);
+
+        $inheritedRole = $this->adapter->getRole($inherited);
+        $result = $this->adapter->addRole($name, $inheritedRole);
         
         $this->assertTrue($result);
+
+        $roleAcl = $this->adapter->getRole($name)->getAccessList();
+        $inheritedAcl = $this->adapter->getRole($inherited)->getAccessList();
+
+        $this->assertCount(2, $roleAcl[$resourceName]);
+        $this->assertSame($roleAcl, $inheritedAcl);
     }
-    
+
     public function testCannotAddAccessToNonExistingResource()
     {
         $name = 'NonExistingResource';
@@ -208,6 +220,30 @@ class MysqlTest extends \PHPUnit_Framework_TestCase
         $this->assertEmpty($this->adapter->getResources());
     }
 
+    public function testDropResourceAccess()
+    {
+        $resourceName = 'ResNameToTest';
+        $resourceAccess = [
+            'fooFoo',
+            'barBar',
+            'bazBAz',
+        ];
+
+        $this->adapter->addResource($resourceName, $resourceAccess);
+        $resourcesList = $this->adapter->getResource($resourceName)->getAccesses();
+        $this->assertCount(3, $resourcesList);
+
+        unset($resourceAccess[0]);
+        $this->adapter->dropResourceAccess($resourceName, $resourceAccess);
+        $resourcesList = $this->adapter->getResource($resourceName)->getAccesses();
+        $this->assertCount(1, $resourcesList);
+        $this->assertSame('fooFoo', key($resourcesList));
+
+        $this->adapter->dropResourceAccess($resourceName, ['fooFoo']);
+        $resourcesList = $this->adapter->getResource($resourceName)->getAccesses();
+        $this->assertCount(0, $resourcesList);
+    }
+
     public function testPermissions()
     {
         $acl = $this->acl;
@@ -252,5 +288,83 @@ class MysqlTest extends \PHPUnit_Framework_TestCase
         $acl->allow('SuperAdmin', 'all', '*');
 
         $this->assertEquals(Acl::ALLOW, $acl->isAllowed('SuperAdmin', 'mvc:wiki:Frontend\Wiki', 'delete'));
+    }
+
+    public function testGetRoles()
+    {
+        $this->removeAllRoles();
+        $this->assertCount(0, $this->adapter->getRoles());
+
+        $roles = [
+            'first-role',
+            'seventh-role',
+            'tenth-role',
+            'nineteenth-role',
+        ];
+
+        foreach ($roles as $roleName) {
+            $this->adapter->addRole($roleName);
+        }
+
+        $roles = $this->adapter->getRoles();
+        $this->assertCount(4, $roles);
+        $this->assertSame('nineteenth-role', end($roles)->getName());
+
+        $this->removeAllRoles();
+    }
+
+    public function testAllowSavesAllowedProperty()
+    {
+        $roleName = 'allowedSaveTestRole';
+        $resourceName = 'allowedSaveTestResource';
+        $access = 'allowedSaveTestAccess';
+
+//        new AclResourceAccess()
+
+        $this->adapter->addRole($roleName);
+        $this->adapter->addResource($resourceName);
+        $this->adapter->addResourceAccess($resourceName, [$access]);
+
+        $this->adapter->allow($roleName, $resourceName, $access, 1);
+    }
+
+    public function testGetValidatedAclModelsThrowsExceptionProvider()
+    {
+        return [
+            [
+                'testRoleOne',
+                'all',
+                'NotWildcardAccess',
+            ],
+            [
+                'testRoleTwo',
+                'notWildcardResource',
+                '*',
+            ],
+        ];
+    }
+
+    /**
+     * @dataProvider testGetValidatedAclModelsThrowsExceptionProvider
+     * @param string        $roleName
+     * @param string        $resourceName
+     * @param string|array $access
+     */
+    public function testGetValidatedAclModelsThrowsException($roleName, $resourceName, $access)
+    {
+        $exceptionMessage = 'Cannot create access to \''. $access .'\' in \''. $resourceName .'\' for role ' . $roleName;
+
+        $this->adapter->addRole($roleName);
+        $this->adapter->addResource($resourceName);
+        $this->setExpectedException('\Exception', $exceptionMessage);
+
+        $this->adapter->allow($roleName, $resourceName, $access);
+    }
+
+    private function removeAllRoles()
+    {
+        foreach ($this->adapter->getRoles() as $role) {
+            $this->adapter->dropRole($role->getName());
+        }
     }
 } 

@@ -63,7 +63,7 @@ class AclResource extends \Phalcon\Mvc\Model
     
     public function getSource()
     {
-        return 'acl_resources';
+        return 'vegas_acl_resources';
     }
     
     /**

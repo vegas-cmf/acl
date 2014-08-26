@@ -67,7 +67,7 @@ class AclRole extends \Phalcon\Mvc\Model
     
     public function getSource()
     {
-        return 'acl_roles';
+        return 'vegas_acl_roles';
     }
     
     /**
