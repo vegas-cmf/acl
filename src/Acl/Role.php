@@ -83,14 +83,13 @@ class Role extends PhalconRole
      */
     private function findAccessByName($accessName)
     {
-        $result = false;
-        array_walk($this->accessList, function($item, $key) use ($accessName, &$result) {
-            if ($item['name'] == $accessName) {
-                $result = $item;
+        foreach ($this->accessList as $resource => $accesses) {
+            if (in_array($accessName, $accesses, true)) {
+                return true;
             }
-        });
+        }
 
-        return $result;
+        return false;
     }
 
     /**
@@ -100,16 +99,6 @@ class Role extends PhalconRole
     public function hasAccess($accessName)
     {
         return (bool)$this->findAccessByName($accessName);
-    }
-
-    /**
-     * @param $accessName
-     * @return bool
-     */
-    public function isAccessAllowed($accessName)
-    {
-        $access = $this->findAccessByName($accessName);
-        return $access['allowed'] == Acl::ALLOW;
     }
     
     /**

@@ -133,11 +133,7 @@ class Mysql extends PhalconAdapter implements AdapterInterface
         $role = $this->getRoleModel($roleToInherit);
 
         foreach ($role->getAccessLists() as $accessList) {
-            if ($accessList->allowed) {
-                $this->allow($roleName, $accessList->getResource(), $accessList->getResourceAccess());
-            } else {
-                $this->deny($roleName, $accessList->getResource(), $accessList->getResourceAccess());
-            }
+            $this->allow($roleName, $accessList->getResource(), $accessList->getResourceAccess());
         }
 
         return true;
@@ -429,20 +425,15 @@ class Mysql extends PhalconAdapter implements AdapterInterface
      * @throws ResourceNotExistsException
      * @throws Exception
      */
-    public function allow($roleName, $resourceName, $access, $test = 0)
+    public function allow($roleName, $resourceName, $access)
     {
         $roleModel = $this->getRoleModel($roleName);
         $resourceModel = $this->getResourceModel($resourceName);
         
-        $acls = $this->getValidatedAclModels($roleName, $resourceName, $access, $test);
+        $acls = $this->getValidatedAclModels($roleName, $resourceName, $access);
 
         foreach ($acls as $acl) {
-            
-            if ($acl instanceof AclAccessList) {
-                $acl->save(['allowed' => Acl::ALLOW]);
-                continue;
-            }
-            
+
             $accessModel = $this->getResourceAccessModel($acl, $resourceName);
             (new AclAccessList())->create([
                 'acl_role_id'            => $roleModel->id,
@@ -492,7 +483,7 @@ class Mysql extends PhalconAdapter implements AdapterInterface
      * @return AclAccessList[] array with AclAccessList models or string names on non-existing ACLs
      * @throws Exception
      */
-    protected function getValidatedAclModels($roleName, $resourceName, $access, $test = 0)
+    protected function getValidatedAclModels($roleName, $resourceName, $access)
     {        
         if (($resourceName === Resource::WILDCARD || $access === Resource::ACCESS_WILDCARD)
             && !($resourceName === Resource::WILDCARD && $access === Resource::ACCESS_WILDCARD)) {
@@ -502,8 +493,8 @@ class Mysql extends PhalconAdapter implements AdapterInterface
         
         $sanitizedResourceName = $this->filterResourceName($resourceName);
 
-        return array_map(function($accessName) use ($roleName, $sanitizedResourceName, $test) {
-            $acl = AclAccessList::findFirstByRoleResourceAndAccess($roleName, $sanitizedResourceName, $accessName, $test);
+        return array_map(function($accessName) use ($roleName, $sanitizedResourceName) {
+            $acl = AclAccessList::findFirstByRoleResourceAndAccess($roleName, $sanitizedResourceName, $accessName);
             return $acl ? $acl : $accessName;
         }, $accesses);
     }

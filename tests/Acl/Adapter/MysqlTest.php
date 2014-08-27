@@ -313,21 +313,6 @@ class MysqlTest extends \PHPUnit_Framework_TestCase
         $this->removeAllRoles();
     }
 
-    public function testAllowSavesAllowedProperty()
-    {
-        $roleName = 'allowedSaveTestRole';
-        $resourceName = 'allowedSaveTestResource';
-        $access = 'allowedSaveTestAccess';
-
-//        new AclResourceAccess()
-
-        $this->adapter->addRole($roleName);
-        $this->adapter->addResource($resourceName);
-        $this->adapter->addResourceAccess($resourceName, [$access]);
-
-        $this->adapter->allow($roleName, $resourceName, $access, 1);
-    }
-
     public function testGetValidatedAclModelsThrowsExceptionProvider()
     {
         return [
