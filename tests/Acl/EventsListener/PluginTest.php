@@ -4,7 +4,7 @@
  *
  * @author Slawomir Zytko <slawomir.zytko@gmail.com>
  * @copyright Amsterdam Standard Sp. Z o.o.
- * @homepage https://bitbucket.org/amsdard/vegas-phalcon
+ * @homepage http://vegas-cmf.github.io
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
@@ -12,11 +12,47 @@
  
 namespace Vegas\Tests\Acl\EventsListener;
 
+use Phalcon\DI;
+
+class FakeAuth {
+
+    public function isAuthenticated()
+    {
+        return true;
+    }
+}
+
+class FakeNoAuth {
+
+    public function isAuthenticated()
+    {
+        return false;
+    }
+}
 
 class PluginTest extends \PHPUnit_Framework_TestCase
 {
-    public function testOK()
+    /**
+     * @param string $url
+     * @param \Phalcon\DI\FactoryDefault $di
+     */
+    private function runApplication($url, DI\FactoryDefault $di = null)
     {
-        $this->assertTrue(true);
+        require_once dirname(__DIR__) . '/../fixtures/app/Bootstrap.php';
+        $config = require dirname(__DIR__) . '/../fixtures/app/config/config.php';
+
+        $config = new \Phalcon\Config($config);
+        $bootstrap = new \Bootstrap($config);
+        if ($di != null) {
+            $bootstrap ->setDi($di);
+        }
+
+        $bootstrap->setup()->run($url);
+    }
+    
+    public function testBeforeExecuteRoute()
+    {
+        $di = DI::getDefault();
+        $this->runApplication('/example', $di);
     }
 }
