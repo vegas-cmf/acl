@@ -51,13 +51,14 @@ class AclResourceTest extends \PHPUnit_Framework_TestCase
      */
     public function testCreateRelatedModels()
     {
+//        $this->markTestSkipped('Db table field types has to be resolved with model field types');
         $resourceModel = AclResource::findFirstByName('CreatedResource');
 
         $roleModel = new AclRole;
         $roleModel->create([
             'name'          => 'guest',
             'description'   => '',
-            'removable'     => true
+            'removable'     => 1
         ]);
         $this->assertEquals(AclRole::DIRTY_STATE_PERSISTENT, $roleModel->getDirtyState());
 
@@ -66,7 +67,7 @@ class AclResourceTest extends \PHPUnit_Framework_TestCase
             'acl_resource_id'   => $resourceModel->id,
             'name'              => 'index',
             'description'       => '',
-            'inherit'           => null
+            'inherit'           => ''
         ]);
         $this->assertEquals(AclResourceAccess::DIRTY_STATE_PERSISTENT, $accessModel->getDirtyState());
 

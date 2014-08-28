@@ -104,12 +104,12 @@ class Mysql extends PhalconAdapter implements AdapterInterface
         try {
             $this->getRole($role->getName());
         } catch (RoleDoesNotExistException $e) {
-
+            
             $roleModel = new AclRole;
             $roleModel->create([
                 'name'          => $role->getName(),
                 'description'   => $role->getDescription(),
-                'removable'     => $role->isRemovable()
+                'removable'     => (int)$role->isRemovable()
             ]);
         }
 

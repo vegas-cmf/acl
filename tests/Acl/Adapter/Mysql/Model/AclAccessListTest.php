@@ -108,7 +108,7 @@ class AclAccessListTest extends \PHPUnit_Framework_TestCase
         $roleModel->create([
             'name'          => 'getRoleRole',
             'description'   => '',
-            'removable'     => true
+            'removable'     => 1
         ]);
 
         $accessModel = new AclResourceAccess;

@@ -28,7 +28,7 @@ class AclRoleTestTest extends \PHPUnit_Framework_TestCase
         $result = $roleModel->create([
             'name'          => $roleName,
             'description'   => '',
-            'removable'     => true
+            'removable'     => 1
         ]);
         $this->assertTrue($result);
         $this->assertEquals(AclResource::DIRTY_STATE_PERSISTENT, $roleModel->getDirtyState());

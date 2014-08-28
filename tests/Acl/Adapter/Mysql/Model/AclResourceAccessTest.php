@@ -36,31 +36,37 @@ class AclResourceAccessTest extends \PHPUnit_Framework_TestCase
             'acl_resource_id'   => $resourceModel->id,
             'name'              => 'index',
             'description'       => '',
-            'inherit'           => null
+            'inherit'           => ''
         ]);
 
         $this->assertTrue($result);
-        $this->assertEquals(AclResource::DIRTY_STATE_PERSISTENT, $accessModel->getDirtyState());
+        $this->assertEquals(AclResourceAccess::DIRTY_STATE_PERSISTENT, $accessModel->getDirtyState());
 
         $roleModel = new AclRole;
-        $roleModel->create([
+        $status = $roleModel->create([
             'name'          => 'getAccessListsRole',
             'description'   => '',
-            'removable'     => true
+            'removable'     => 1
         ]);
+        
+        $this->assertTrue($result);
+        $this->assertEquals(AclRole::DIRTY_STATE_PERSISTENT, $roleModel->getDirtyState());
 
         $aclModel = new AclAccessList;
-        $aclModel->create([
+        $result = $aclModel->create([
             'acl_role_id'            => $roleModel->id,
             'acl_resource_id'        => $resourceModel->id,
             'acl_resource_access_id' => $accessModel->id,
             'allowed'                => Acl::ALLOW
         ]);
+        
+        $this->assertTrue($result);
+        $this->assertEquals(AclAccessList::DIRTY_STATE_PERSISTENT, $aclModel->getDirtyState());
 
         $list = $accessModel->getAccessLists();
         $this->assertCount(1, $list);
         $this->assertArrayHasKey(0, $list);
-        $this->assertEquals($list[0], $aclModel);
+        $this->assertSame($list[0]->id, $aclModel->id);
     }
 
     public function testGetResource()
@@ -85,7 +91,7 @@ class AclResourceAccessTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals(AclResource::DIRTY_STATE_PERSISTENT, $resourceModel->getDirtyState());
 
         $resource = $accessModel->getResource();
-        $this->assertEquals($resource, $resourceModel);
+        $this->assertEquals($resource->id, $resourceModel->id);
     }
 
     public function testIsWildcard()
