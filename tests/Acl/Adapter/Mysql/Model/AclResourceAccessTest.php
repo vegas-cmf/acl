@@ -32,6 +32,7 @@ class AclResourceAccessTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals(AclResource::DIRTY_STATE_PERSISTENT, $resourceModel->getDirtyState());
 
         $accessModel = new AclResourceAccess;
+        $accessModel->initialize();
         $result = $accessModel->create([
             'acl_resource_id'   => $resourceModel->id,
             'name'              => 'index',

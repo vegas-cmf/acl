@@ -46,6 +46,7 @@ class AclAccessListTest extends \PHPUnit_Framework_TestCase
         ]);
 
         $aclModel = new AclAccessList;
+        $aclModel->initialize();
         $aclModel->create([
             'acl_role_id'            => $roleModel->id,
             'acl_resource_id'        => $resourceModel->id,

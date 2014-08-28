@@ -12,11 +12,8 @@
  
 namespace Vegas\Tests\Acl\Adapter\Mysql\Model;
 
-use Vegas\Security\Acl\Adapter\Mysql\Model\AclAccessList,
-    Vegas\Security\Acl\Adapter\Mysql\Model\AclRole,
-    Vegas\Security\Acl\Adapter\Mysql\Model\AclResource,
-    Vegas\Security\Acl\Adapter\Mysql\Model\AclResourceAccess;
-use Phalcon\Acl;
+use Vegas\Security\Acl\Adapter\Mysql\Model\AclRole,
+    Vegas\Security\Acl\Adapter\Mysql\Model\AclResource;
 
 class AclRoleTestTest extends \PHPUnit_Framework_TestCase
 {
@@ -25,6 +22,8 @@ class AclRoleTestTest extends \PHPUnit_Framework_TestCase
     {
         $roleName = 'toStringAclRoleTest';
         $roleModel = new AclRole;
+        $roleModel->initialize();
+        
         $result = $roleModel->create([
             'name'          => $roleName,
             'description'   => '',

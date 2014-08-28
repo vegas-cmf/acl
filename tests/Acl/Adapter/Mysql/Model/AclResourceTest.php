@@ -23,6 +23,8 @@ class AclResourceTest extends \PHPUnit_Framework_TestCase
     public function testCreateResource()
     {
         $resource = new AclResource;
+        $resource->initialize();
+        
         $this->assertNull($resource->id);
 
         $result = $resource->save([
@@ -33,6 +35,11 @@ class AclResourceTest extends \PHPUnit_Framework_TestCase
         
         $this->assertTrue($result);
         $this->assertEquals(AclResource::DIRTY_STATE_PERSISTENT, $resource->getDirtyState());
+    }
+    
+    public function testInitialize()
+    {
+        
     }
 
     /**
