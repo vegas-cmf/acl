@@ -2,6 +2,8 @@
 
 namespace Foo\Controllers\Frontend;
 
+use \Vegas\Mvc\View;
+
 /**
  * Class ExampleController
  *
@@ -21,8 +23,6 @@ class ExampleController extends \Vegas\Mvc\Controller\ControllerAbstract
      */
     public function indexAction()
     {
-        $response = new JsonResponse();
-        $response->success()->setData(array('test' => 'value'))->setMessage('index OK');
-        return $this->jsonResponse($response);
+        echo 'INDEX ACTION';
     }
 }

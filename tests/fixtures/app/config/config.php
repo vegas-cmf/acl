@@ -20,7 +20,6 @@ return array(
             'layout'    =>  'main.volt',
             'layoutsDir'    =>  APP_ROOT . '/app/layouts/'
         ),
-        'hostname' => 'vegas.dev'
     ),
 
     'plugins' => array(

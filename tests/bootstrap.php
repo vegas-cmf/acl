@@ -37,15 +37,4 @@ $di->set('acl_mysql', function() {
     return $acl;
 }, true);
 
-use \Vegas\Mvc\View;
-$di->set('view', function(){
-    $view = new View();
-    $view->disableLevel(array(
-        View::LEVEL_LAYOUT => true,
-        View::LEVEL_MAIN_LAYOUT => true
-    ));
-
-    return $view;
-}, true);
-
 \Phalcon\DI::setDefault($di);
