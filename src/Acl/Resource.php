@@ -58,7 +58,7 @@ class Resource extends PhalconResource
      */
     public function hasAccess($accessName)
     {
-        return in_array($accessName, $this->accesses);
+        return array_key_exists($accessName, $this->accesses);
     }
 
     /**

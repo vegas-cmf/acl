@@ -53,7 +53,7 @@ class AclAccessList extends \Phalcon\Mvc\Model
      */
     public function getSource()
     {
-        return 'acl_access_list';
+        return 'vegas_acl_access_list';
     }
     
     /**

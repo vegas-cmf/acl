@@ -15,7 +15,7 @@ namespace Vegas\Security\Acl\Adapter;
 use Phalcon\Acl\Adapter as PhalconAdapter;
 use Phalcon\Acl;
 use Vegas\Security\Acl\Adapter\Exception\ResourceNotExistsException;
-use Vegas\Security\Acl\Adapter\Exception\RoleNotExistsException;
+use Vegas\Security\Acl\Adapter\Exception\RoleDoesNotExistException;
 use Vegas\Security\Acl\Adapter\Exception\ResourceAccessNotExistsException;
 use Vegas\Security\Acl\Role;
 use Vegas\Security\Acl\Resource;
@@ -103,14 +103,13 @@ class Mysql extends PhalconAdapter implements AdapterInterface
 
         try {
             $this->getRole($role->getName());
-            
-        } catch (RoleNotExistsException $e) {
+        } catch (RoleDoesNotExistException $e) {
             
             $roleModel = new AclRole;
             $roleModel->create([
                 'name'          => $role->getName(),
                 'description'   => $role->getDescription(),
-                'removable'     => $role->isRemovable()
+                'removable'     => (int)$role->isRemovable()
             ]);
         }
 
@@ -131,13 +130,10 @@ class Mysql extends PhalconAdapter implements AdapterInterface
     public function addInherit($roleName, $roleToInherit)
     {
         //finds role model
-        $role = $this->getRoleModel($roleName);
+        $role = $this->getRoleModel($roleToInherit);
+
         foreach ($role->getAccessLists() as $accessList) {
-            if ($accessList->allowed) {
-                $this->allow($roleName, $accessList->getResource(), $accessList->getResourceAccess());
-            } else {
-                $this->deny($roleName, $accessList->getResource(), $accessList->getResourceAccess());
-            }
+            $this->allow($roleName, $accessList->getResource(), $accessList->getResourceAccess());
         }
 
         return true;
@@ -310,22 +306,23 @@ class Mysql extends PhalconAdapter implements AdapterInterface
     
     /**
      * @param $role
-     * @throws Exception\RoleNotExistsException
+     * @throws Exception\RoleDoesNotExistException
      * @return AclRole
      */
     protected function getRoleModel($role)
     {
         $model = AclRole::findFirstByName($role);
         if (!$model) {
-            throw new RoleNotExistsException($role);
+            throw new RoleDoesNotExistException($role);
         }
+
         return $model;
     }
     
     /**
      * Gets role with all its accesses
      * 
-     * @param $role
+     * @param string $role
      * @return \Vegas\Security\Acl\Role
      */
     public function getRole($role)
@@ -334,7 +331,7 @@ class Mysql extends PhalconAdapter implements AdapterInterface
             $role = $this->getRoleModel($role);
         }
 
-        $roleObject = new Role($role, $role->description);
+        $roleObject = new Role($role->name, $role->description);
         $roleObject->setRemovable($role->removable);
         $roleObject->setId($role->id);
         
@@ -424,7 +421,7 @@ class Mysql extends PhalconAdapter implements AdapterInterface
      * @param string $roleName
      * @param string $resourceName
      * @param mixed  $access
-     * @throws RoleNotExistsException
+     * @throws RoleDoesNotExistException
      * @throws ResourceNotExistsException
      * @throws Exception
      */
@@ -434,14 +431,9 @@ class Mysql extends PhalconAdapter implements AdapterInterface
         $resourceModel = $this->getResourceModel($resourceName);
         
         $acls = $this->getValidatedAclModels($roleName, $resourceName, $access);
-        
+
         foreach ($acls as $acl) {
-            
-            if ($acl instanceof AclAccessList) {
-                $acl->save(['allowed' => Acl::ALLOW]);
-                continue;
-            }
-            
+
             $accessModel = $this->getResourceAccessModel($acl, $resourceName);
             (new AclAccessList())->create([
                 'acl_role_id'            => $roleModel->id,
@@ -467,7 +459,7 @@ class Mysql extends PhalconAdapter implements AdapterInterface
      * @param  string  $roleName
      * @param  string  $resourceName
      * @param  mixed   $access
-     * @throws RoleNotExistsException
+     * @throws RoleDoesNotExistException
      * @throws ResourceNotExistsException
      * @throws Exception
      */
@@ -500,6 +492,7 @@ class Mysql extends PhalconAdapter implements AdapterInterface
         $accesses = is_array($access) ? $access : [$access];
         
         $sanitizedResourceName = $this->filterResourceName($resourceName);
+
         return array_map(function($accessName) use ($roleName, $sanitizedResourceName) {
             $acl = AclAccessList::findFirstByRoleResourceAndAccess($roleName, $sanitizedResourceName, $accessName);
             return $acl ? $acl : $accessName;

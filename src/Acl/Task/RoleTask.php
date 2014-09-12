@@ -117,6 +117,11 @@ class RoleTask extends \Vegas\Cli\Task
     }
 
     /**
+     * Sets up default builtin roles:
+     * - creates guest role for non-authenticated users
+     * - creates super-admin role with all privileges
+     * Usage:
+     *   vegas:security_acl:role setup
      *
      */
     public function setupAction()
@@ -125,6 +130,12 @@ class RoleTask extends \Vegas\Cli\Task
         $roleManager = $acl->getRoleManager();
 
         $roleManager->add(UserRole::DEFAULT_ROLE_GUEST, 'Not authenticated user', true);
+        $acl->getResourceManager()->add(
+            Resource::WILDCARD,
+            ucfirst(Resource::WILDCARD),
+            Resource::ACCESS_WILDCARD
+        );
+                
         $roleManager->add(UserRole::SUPER_ADMIN, 'Super administrator with all privileges', true);
         $acl->allow(UserRole::SUPER_ADMIN, Resource::WILDCARD, Resource::ACCESS_WILDCARD);
 
@@ -132,13 +143,23 @@ class RoleTask extends \Vegas\Cli\Task
     }
 
     /**
+     * Creates new role.
+     * Usage:
+     *   vegas:security_acl:role add [options]
+     * Options:
+     *   --name           -n      Name of role
+     *   --description    -d      Description of role
      *
+     * Example:
+     * <code>
+     *  vegas:security_acl:role add -n Manager -d "Manages regular users"
+     * </code>
      */
     public function addAction()
     {
         $name = $this->getOption('n');
         $description = $this->getOption('d');
-
+        
         //creates role
         $this->getAcl()->getRoleManager()->add($name, $description);
 
@@ -146,7 +167,16 @@ class RoleTask extends \Vegas\Cli\Task
     }
 
     /**
+     * Removes existing role.
+     * Usage:
+     *   vegas:security_acl:role remove [options]
+     * Options:
+     *   --name           -n      Name of role
      *
+     * Example:
+     * <code>
+     *  vegas:security_acl:role remove -n Manager
+     * </code>
      */
     public function removeAction()
     {
@@ -159,6 +189,20 @@ class RoleTask extends \Vegas\Cli\Task
     }
 
     /**
+     * Grants access to a resource for specified role. Multiple access lists can be specified.
+     * Both role and resource must exist before running this command.
+     *
+     * Usage:
+     *   vegas:security_acl:role allow [options]
+     * Options:
+     *   --name           -n      Name of role
+     *   --resource       -r      Resource to allow
+     *   --access_list    -al     List of accesses in resource to allow
+     *
+     * Example:
+     * <code>
+     *  vegas:security_acl:role allow -n Editor -r mvc:wiki:Frontend-Handbook -al index
+     * </code>
      * @throws \Vegas\Security\Acl\Adapter\Exception\ResourceNotExistsException
      */
     public function allowAction()
@@ -187,6 +231,20 @@ class RoleTask extends \Vegas\Cli\Task
     }
 
     /**
+     * Removes access to a resource for specified role. Multiple access lists can be specified.
+     * Both role and resource must exist before running this command.
+     *
+     * Usage:
+     *   vegas:security_acl:role deny [options]
+     * Options:
+     *   --name           -n      Name of role
+     *   --resource       -r      Resource to deny
+     *   --access_list    -al     List of accesses in resource to deny
+     *
+     * Example:
+     * <code>
+     *  vegas:security_acl:role deny -n Editor -r mvc:wiki:Frontend-Handbook -al delete
+     * </code>
      * @throws \Vegas\Security\Acl\Adapter\Exception\ResourceNotExistsException
      */
     public function denyAction()
@@ -218,7 +276,10 @@ class RoleTask extends \Vegas\Cli\Task
     }
 
     /**
+     * Clears stored list of resources with their accesses and recreates it based on ACL annotations in controllers.
      *
+     * Usage:
+     *   vegas:security_acl:role build
      */
     public function buildAction()
     {

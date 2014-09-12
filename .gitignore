@@ -36,3 +36,4 @@ composer.phar
 composer.lock
 
 cache/
+/nbproject

@@ -19,8 +19,9 @@ use Vegas\Mvc\Module\SubModuleManager;
 
 /**
  * ACL resources builder
- * Class browses the list of modules provided in constructor and looks for controllers
- * For each controller annotations are parsed for extracting list of accesses
+ *
+ * Class browses the list of modules provided in constructor and looks for controllers.
+ * For each controller annotations are parsed for extracting list of accesses.
  *
  * Example usage:
  * <code>
@@ -62,7 +63,7 @@ use Vegas\Mvc\Module\SubModuleManager;
  *          'path'  =>  APP_ROOT . '/app/module/Test/Module.php'
  *      )
  * );
- * $aclBuilder = new \Vegas\Security\Acl\Builder($modules);
+ * $aclBuilder = new \Vegas\Security\Acl\Builder($modules)parsePredefinedResources;
  * $aclResources = $aclBuilder->build();
  * </code>
  *
@@ -110,6 +111,15 @@ class Builder
     protected $annotationReader;
 
     /**
+     * Relative directories paths, where controllers files are looked for
+     *
+     * @var array
+     */
+    protected $controllersDirectories = array(
+        '/controllers/backend/', '/controllers/frontend/'
+    );
+
+    /**
      * Setups modules and annotations reader
      *
      * @param array $modules
@@ -134,15 +144,6 @@ class Builder
             $this->annotationReader = $adapter;
         }
     }
-
-    /**
-     * Relative directories paths, where controllers files are looked for
-     *
-     * @var array
-     */
-    protected $controllersDirectories = array(
-        '/controllers/backend/', '/controllers/frontend/'
-    );
 
     /**
      * Builds ACL resources from provided modules

@@ -18,7 +18,7 @@ use Vegas\Security\Acl\Adapter\Exception as AclAdapterException;
  *
  * @package Vegas\Security\Acl\Adapter\Exception
  */
-class RoleNotExistsException extends AclAdapterException
+class RoleDoesNotExistException extends AclAdapterException
 {
     protected $message = "Role does not exist";
     
