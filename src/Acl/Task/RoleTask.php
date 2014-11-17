@@ -89,7 +89,7 @@ class RoleTask extends \Vegas\Cli\Task
         $option->setRequired(true);
         $allowAction->addOption($option);
 
-        $option = new Option('access_list', 'al', 'List of accesses in resource to allow');
+        $option = new Option('access', 'a', 'Access in resource to allow');
         $allowAction->addOption($option);
 
         $this->addTaskAction($allowAction);
@@ -104,7 +104,7 @@ class RoleTask extends \Vegas\Cli\Task
         $option->setRequired(true);
         $denyAction->addOption($option);
 
-        $option = new Option('access_list', 'al', 'List of accesses in resource to deny');
+        $option = new Option('access', 'a', 'Access in resource to deny');
         $denyAction->addOption($option);
 
         $this->addTaskAction($denyAction);
@@ -148,7 +148,7 @@ class RoleTask extends \Vegas\Cli\Task
      *   vegas:security_acl:role add [options]
      * Options:
      *   --name           -n      Name of role
-     *   --description    -d      Description of role
+     *   --description    -d      Description of role (optional)
      *
      * Example:
      * <code>
@@ -189,7 +189,7 @@ class RoleTask extends \Vegas\Cli\Task
     }
 
     /**
-     * Grants access to a resource for specified role. Multiple access lists can be specified.
+     * Grants specified access (or all accesses) to a resource for specified role.
      * Both role and resource must exist before running this command.
      *
      * Usage:
@@ -197,11 +197,11 @@ class RoleTask extends \Vegas\Cli\Task
      * Options:
      *   --name           -n      Name of role
      *   --resource       -r      Resource to allow
-     *   --access_list    -al     List of accesses in resource to allow
+     *   --access         -a      Access in resource to allow (optional)
      *
      * Example:
      * <code>
-     *  vegas:security_acl:role allow -n Editor -r mvc:wiki:Frontend-Handbook -al index
+     *  vegas:security_acl:role allow -n Editor -r mvc:wiki:Frontend-Handbook -a index
      * </code>
      * @throws \Vegas\Security\Acl\Adapter\Exception\ResourceNotExistsException
      */
@@ -214,24 +214,22 @@ class RoleTask extends \Vegas\Cli\Task
 
         $role = $acl->getRole($roleName);
         $resource = $acl->getResource($resourceName);
-        if (($accessList = $this->getOption('al'))) {
-            //creates access list
-            foreach ($accessList as $access) {
-                if (!$resource->hasAccess($access)) {
-                    throw new ResourceNotExistsException($access);
-                }
-            }
-        } else {
-            $accessList = array(Resource::WILDCARD);
-        }
 
-        $acl->allow($role->getName(), $resource->getName(), $accessList);
+        $access = $this->getOption('a');
+        if ($access && !$resource->hasAccess($access)) {
+            throw new ResourceNotExistsException($access);
+        }
+        $accessList = $access ? [$access] : array_keys($resource->getAccesses());
+
+        foreach ($accessList as $access) {
+            $acl->allow($role->getName(), $resource->getName(), $access);
+        }
 
         $this->putText('Success.');
     }
 
     /**
-     * Removes access to a resource for specified role. Multiple access lists can be specified.
+     * Removes specified access (or all accesses) to a resource for specified role.
      * Both role and resource must exist before running this command.
      *
      * Usage:
@@ -239,11 +237,11 @@ class RoleTask extends \Vegas\Cli\Task
      * Options:
      *   --name           -n      Name of role
      *   --resource       -r      Resource to deny
-     *   --access_list    -al     List of accesses in resource to deny
+     *   --access         -a      Access in resource to deny (optional)
      *
      * Example:
      * <code>
-     *  vegas:security_acl:role deny -n Editor -r mvc:wiki:Frontend-Handbook -al delete
+     *  vegas:security_acl:role deny -n Editor -r mvc:wiki:Frontend-Handbook -a delete
      * </code>
      * @throws \Vegas\Security\Acl\Adapter\Exception\ResourceNotExistsException
      */
@@ -257,20 +255,15 @@ class RoleTask extends \Vegas\Cli\Task
         $role = $acl->getRole($roleName);
         $resource = $acl->getResource($resourceName);
 
-        if (($accessList = $this->getOption('al'))) {
-            //creates access list
-            $params = $this->getArgs();
-            $accessList = array_splice($params, 2);
-            foreach ($accessList as $access) {
-                if (!$resource->hasAccess($access)) {
-                    throw new ResourceNotExistsException($access);
-                }
-            }
-        } else {
-            $accessList = array(Resource::WILDCARD);
+        $access = $this->getOption('a');
+        if ($access && !$resource->hasAccess($access)) {
+            throw new ResourceNotExistsException($access);
         }
+        $accessList = $access ? [$access] : array_keys($resource->getAccesses());
 
-        $acl->deny($role->getName(), $resource->getName(), $accessList);
+        foreach ($accessList as $access) {
+            $acl->deny($role->getName(), $resource->getName(), $access);
+        }
 
         $this->putText('Success.');
     }

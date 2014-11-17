@@ -58,4 +58,19 @@ class AclTest extends \PHPUnit_Framework_TestCase
             $this->assertTrue($canBeCalled);
         }
     }
+
+    /**
+     * @depends testGetResourceManager
+     * @depends testGetRoleManager
+     */
+    public function testInvalidationGeneratesNewManagers()
+    {
+        $oldResourceManager = $this->acl->getResourceManager();
+        $oldRoleManager = $this->acl->getRoleManager();
+
+        $this->acl->invalidate();
+
+        $this->assertNotSame($oldResourceManager, $this->acl->getResourceManager());
+        $this->assertNotSame($oldRoleManager, $this->acl->getRoleManager());
+    }
 }

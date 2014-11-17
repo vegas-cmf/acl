@@ -76,30 +76,6 @@ class Role extends PhalconRole
     {
         return $this->accessList;
     }
-
-    /**
-     * @param $accessName
-     * @return bool
-     */
-    private function findAccessByName($accessName)
-    {
-        foreach ($this->accessList as $resource => $accesses) {
-            if (in_array($accessName, $accesses, true)) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    /**
-     * @param $accessName
-     * @return bool
-     */
-    public function hasAccess($accessName)
-    {
-        return (bool)$this->findAccessByName($accessName);
-    }
     
     /**
      * @param \MongoId|integer $id

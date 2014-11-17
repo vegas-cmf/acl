@@ -473,8 +473,6 @@ class Mongo extends PhalconAdapter implements AdapterInterface
      * <code>
      * //Does Andres have access to the customers resource to create?
      * $acl->isAllowed('Andres', 'Products', 'create');
-     * //Do guests have access to any resource to edit?
-     * $acl->isAllowed('guests', '*', 'edit');
      * </code>
      *
      * @param  string  $role
