@@ -13,107 +13,191 @@
 namespace Vegas\Tests\Acl\Adapter;
 
 use Phalcon\DI,
-    \Vegas\Security\Acl\Task\RoleTask;
+    Phalcon\Acl,
+    Vegas\Tests\Cli\TestCase;
 
-class RoleTaskTest extends \PHPUnit_Framework_TestCase
+class RoleTaskTest extends TestCase
 {
     /**
-     * Object to be tested.
-     * 
-     * @var Role
+     * @var \Vegas\Security\Acl\RoleManager
      */
-    private $obj;
-    
+    private $roleManager;
+
+    /**
+     * @var \Vegas\Security\Acl\ResourceManager
+     */
+    private $resourceManager;
+
+    /**
+     * Clear all ACL settings before starting tests.
+     */
+    public static function setUpBeforeClass()
+    {
+        $mongo = DI::getDefault()->get('mongo');
+        $mongo->selectCollection('vegas_acl_roles')->remove();
+        $mongo->selectCollection('vegas_acl_resources')->remove();
+        $mongo->selectCollection('vegas_acl_access_list')->remove();
+        $mongo->selectCollection('vegas_acl_resources_accesses')->remove();
+    }
+
     public function setUp()
     {
-        $this->obj = new RoleTask();
-    }
-    
-    public function tearDown()
-    {
-        $this->obj = null;
-    }
-    
-    public function testSetOptions()
-    {
-        $expectedOptions = [
-            'setup',
-            'add',
-            'remove',
-            'allow',
-            'deny',
-            'build',
-        ];
-        
-        $this->obj->setOptions();
-        $actions = $this->getInaccessiblePropertyValue($this->obj, 'actions', 'Vegas\Cli\Task');
-        
-        $this->assertSame($expectedOptions, array_keys($actions));
-    }
-    
-    public function testSetupAction()
-    {
-        $acl = DI::getDefault()->get('acl');
-        $roleManager = $acl->getRoleManager();
-        $resourceManager = $acl->getResourceManager();
-        
-        $this->obj->setupAction();
-        
-        $this->assertTrue($roleManager->isRole('Guest'));
-        $this->assertTrue($roleManager->isRole('SuperAdmin'));
-        $this->assertTrue($resourceManager->isResource('all'));
-        $this->assertContains('Success.', $this->obj->getOutput());
-    }
-    
-    public function testAddAction()
-    {
-        $this->markTestIncomplete('Set up run configuration for dispatcher to work.');
-        $this->obj->setOptions();
-        $this->obj->addAction();
-        
-        $this->assertContains('Success.', $this->obj->getOutput());
-    }
-    
-    public function testRemoveAction()
-    {
-        $this->markTestIncomplete('Set up run configuration for dispatcher to work.');
-        $this->obj->setOptions();
-        
-        $actions = $this->getInaccessiblePropertyValue($this->obj, 'actions', 'Vegas\Cli\Task');
-        $this->assertInstanceOf('\Vegas\Cli\Task\Action', $actions['setup']);
-        
-        $this->obj->removeAction();
-        $this->assertContains('Success.', $this->obj->getOutput());
+        parent::setUp();
+        $this->reloadManagers();
     }
 
-    public function testAllowAction()
+    /**
+     * Shorthand for more descriptive CLI command testing
+     * @param string $command full command string to be called
+     * @return string
+     */
+    protected function runCliAction($command)
     {
-        $this->markTestIncomplete('Set up run configuration for dispatcher to work.');
-        $this->obj->allowAction();
-        $this->assertContains('Success.', $this->obj->getOutput());
+        $this->bootstrap->setArguments(str_getcsv($command, ' '));
+
+        ob_start();
+
+        $this->bootstrap->setup()->run();
+        $result = ob_get_contents();
+
+        ob_end_clean();
+
+        return $result;
     }
-    
-    public function testDenyAction()
+
+    private function reloadManagers()
     {
-        $this->markTestIncomplete('Set up run configuration for dispatcher to work.');
-        $this->obj->denyAction();
-        $this->assertContains('Success.', $this->obj->getOutput());
+        $acl = $this->di->get('acl')->invalidate();
+        $this->roleManager = $acl->getRoleManager();
+        $this->resourceManager = $acl->getResourceManager();
     }
-    
+
+    /**
+     * Verifies files under app/modules/_MODULE_/controllers path are used to build resource list
+     */
     public function testBuildAction()
     {
-        $this->markTestIncomplete('Set up run configuration for dispatcher to work.');
-        $this->obj->buildAction();
-        $this->assertContains('Success.', $this->obj->getOutput());
-    }
-    
-    private function getInaccessiblePropertyValue($obj, $propertyName, $parent = null)
-    {
-        $parent = empty($parent) ? $obj : $parent;
-        
-        $reflectionProperty = new \ReflectionProperty($parent, $propertyName);
-        $reflectionProperty->setAccessible(true);
+        $this->assertFalse($this->resourceManager->isResource('all'));
+        $this->assertFalse($this->resourceManager->isResource('mvc:foo:Frontend-Crud'));
+        $this->assertFalse($this->resourceManager->isResource('mvc:foo:Frontend-Example'));
 
-        return $reflectionProperty->getValue($obj);
+        $result = $this->runCliAction('cli/cli.php vegas:security_acl:role build');
+        $this->reloadManagers();
+
+        $this->assertContains('Success.', $result);
+        $this->assertTrue($this->resourceManager->isResource('all'));
+        $this->assertTrue($this->resourceManager->isResource('mvc:foo:Frontend-Crud'));
+        $this->assertTrue($this->resourceManager->isResource('mvc:foo:Frontend-Example'));
+    }
+
+    /**
+     * Populates application database with predefined roles: Guest and SuperAdmin.
+     * Sets up all privileges to SuperAdmin user as well therefore resource list must be generated first.
+     * @depends testBuildAction
+     */
+    public function testSetupAction()
+    {
+        $this->assertFalse($this->roleManager->isRole('Guest'));
+        $this->assertFalse($this->roleManager->isRole('SuperAdmin'));
+        $this->assertTrue($this->resourceManager->isResource('all'));
+
+        $result = $this->runCliAction('cli/cli.php vegas:security_acl:role setup');
+        $this->reloadManagers();
+
+        $this->assertContains('Success.', $result);
+        $this->assertTrue($this->roleManager->isRole('Guest'));
+        $this->assertTrue($this->roleManager->isRole('SuperAdmin'));
+    }
+
+    /**
+     * @depends testSetupAction
+     */
+    public function testAddAction()
+    {
+        $this->assertFalse($this->roleManager->isRole('Manager'));
+
+        $result1 = $this->runCliAction('cli/cli.php vegas:security_acl:role add -n Manager -d "Manages regular users"');
+        $result2 = $this->runCliAction('cli/cli.php vegas:security_acl:role add -n Editor');
+        $this->reloadManagers();
+
+        $this->assertContains('Success.', $result1);
+        $this->assertContains('Success.', $result2);
+
+        $this->assertTrue($this->roleManager->isRole('Manager'));
+        $this->assertTrue($this->roleManager->isRole('Editor'));
+        $this->assertEquals('Manages regular users', $this->roleManager->getRole('Manager')->getDescription());
+        $this->assertEquals('', $this->roleManager->getRole('Editor')->getDescription());
+    }
+
+    /**
+     * @depends testAddAction
+     */
+    public function testRemoveAction()
+    {
+        $this->assertTrue($this->roleManager->isRole('Editor'));
+
+        $result = $this->runCliAction('cli/cli.php vegas:security_acl:role remove -n Editor');
+        $this->reloadManagers();
+
+        $this->assertContains('Success.', $result);
+
+        $this->assertFalse($this->roleManager->isRole('Editor'));
+    }
+
+    /**
+     * @depends testAddAction
+     */
+    public function testAllowAction()
+    {
+        $this->assertInstanceOf('\Vegas\Security\Acl\Role', $this->roleManager->getRole('Manager'));
+
+        $acl = $this->di->get('acl');
+        $this->assertEquals(Acl::DENY, $acl->isAllowed('Manager', 'mvc:foo:Frontend-Example', 'index'));
+        $this->assertEquals(Acl::DENY, $acl->isAllowed('Manager', 'mvc:foo:Frontend-Crud', 'index'));
+        $this->assertEquals(Acl::DENY, $acl->isAllowed('Manager', 'mvc:foo:Frontend-Crud', 'show'));
+        $this->assertEquals(Acl::DENY, $acl->isAllowed('Manager', 'mvc:foo:Frontend-Crud', 'delete'));
+
+        $resultOne = $this->runCliAction('cli/cli.php vegas:security_acl:role allow -n Manager -r mvc:foo:Frontend-Crud -a index');
+        $this->assertContains('Success.', $resultOne);
+
+        $this->assertEquals(Acl::DENY, $acl->isAllowed('Manager', 'mvc:foo:Frontend-Example', 'index'));
+        $this->assertEquals(Acl::ALLOW, $acl->isAllowed('Manager', 'mvc:foo:Frontend-Crud', 'index'));
+        $this->assertEquals(Acl::DENY, $acl->isAllowed('Manager', 'mvc:foo:Frontend-Crud', 'show'));
+        $this->assertEquals(Acl::DENY, $acl->isAllowed('Manager', 'mvc:foo:Frontend-Crud', 'delete'));
+
+        $resultMultiple = $this->runCliAction('cli/cli.php vegas:security_acl:role allow -n Manager -r mvc:foo:Frontend-Crud');
+        $this->assertContains('Success.', $resultMultiple);
+
+        $this->assertEquals(Acl::DENY, $acl->isAllowed('Manager', 'mvc:foo:Frontend-Example', 'index'));
+        $this->assertEquals(Acl::ALLOW, $acl->isAllowed('Manager', 'mvc:foo:Frontend-Crud', 'index'));
+        $this->assertEquals(Acl::ALLOW, $acl->isAllowed('Manager', 'mvc:foo:Frontend-Crud', 'show'));
+        $this->assertEquals(Acl::ALLOW, $acl->isAllowed('Manager', 'mvc:foo:Frontend-Crud', 'delete'));
+    }
+
+    /**
+     * @depends testAllowAction
+     */
+    public function testDenyAction()
+    {
+        $this->assertInstanceOf('\Vegas\Security\Acl\Role', $this->roleManager->getRole('Manager'));
+
+        $acl = $this->di->get('acl');
+        $this->assertEquals(Acl::ALLOW, $acl->isAllowed('Manager', 'mvc:foo:Frontend-Crud', 'index'));
+        $this->assertEquals(Acl::ALLOW, $acl->isAllowed('Manager', 'mvc:foo:Frontend-Crud', 'show'));
+        $this->assertEquals(Acl::ALLOW, $acl->isAllowed('Manager', 'mvc:foo:Frontend-Crud', 'delete'));
+
+        $resultOne = $this->runCliAction('cli/cli.php vegas:security_acl:role deny -n Manager -r mvc:foo:Frontend-Crud -a delete');
+        $this->assertContains('Success.', $resultOne);
+
+        $this->assertEquals(Acl::ALLOW, $acl->isAllowed('Manager', 'mvc:foo:Frontend-Crud', 'index'));
+        $this->assertEquals(Acl::ALLOW, $acl->isAllowed('Manager', 'mvc:foo:Frontend-Crud', 'show'));
+        $this->assertEquals(Acl::DENY, $acl->isAllowed('Manager', 'mvc:foo:Frontend-Crud', 'delete'));
+
+        $resultMultiple = $this->runCliAction('cli/cli.php vegas:security_acl:role deny -n Manager -r mvc:foo:Frontend-Crud');
+        $this->assertContains('Success.', $resultMultiple);
+
+        $this->assertEquals(Acl::DENY, $acl->isAllowed('Manager', 'mvc:foo:Frontend-Crud', 'index'));
+        $this->assertEquals(Acl::DENY, $acl->isAllowed('Manager', 'mvc:foo:Frontend-Crud', 'show'));
+        $this->assertEquals(Acl::DENY, $acl->isAllowed('Manager', 'mvc:foo:Frontend-Crud', 'delete'));
     }
 }

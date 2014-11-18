@@ -29,8 +29,8 @@ use Vegas\Security\Acl\RoleManager;
  * @method addResource($resource, $accessList=null)
  * @method addResourceAccess($resourceName, $accessList)
  * @method dropResourceAccess($resourceName, $accessList)
- * @method allow($roleName, $resourceName, $access = '*')
- * @method deny($roleName, $resourceName, $access = '*')
+ * @method allow($roleName, $resourceName)
+ * @method deny($roleName, $resourceName)
  * @method isAllowed($role, $resource, $access)
  * @method removeResources()
  * @method removeResourceAccesses()
@@ -76,7 +76,7 @@ class Acl implements InjectionAwareInterface
      */
     public function __call($name, $args)
     {
-        return call_user_func_array(array($this->adapter, $name), $args);
+        return call_user_func_array([$this->adapter, $name], $args);
     }
 
     /**
@@ -117,5 +117,16 @@ class Acl implements InjectionAwareInterface
         }
 
         return $this->roleManager;
+    }
+
+    /**
+     * Use it in case of reloading roles/resources/accesses after modification during the same request
+     * @return $this
+     */
+    public function invalidate()
+    {
+        $this->resourceManager = null;
+        $this->roleManager = null;
+        return $this;
     }
 }

@@ -10,7 +10,7 @@ environments:
         host: localhost
         name: vegas_test
         user: root
-        pass: 'root'
+        pass:
         port: 3306
         charset: utf8
 

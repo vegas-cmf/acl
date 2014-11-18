@@ -34,23 +34,6 @@ class RoleTest extends \PHPUnit_Framework_TestCase
         $this->obj = null;
     }
 
-    public function testHasAccess()
-    {
-        $accessName = 'foobar';
-        $accesses = [
-            [
-                'name' => 'someTestAccessName',
-                'description' => 'foo description',
-                'resources_name' => 'Foo-Bar',
-                'access_name' => $accessName,
-            ]
-        ];
-
-        $this->assertFalse($this->obj->hasAccess($accessName));
-        $this->obj->setAccessList($accesses);
-        $this->assertTrue($this->obj->hasAccess($accessName));
-    }
-
     public function testGetId()
     {
         $id = 'foo';
