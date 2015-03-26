@@ -19,7 +19,7 @@ class CrudController extends \Vegas\Mvc\Controller\CrudAbstract
     /**
      * @ACL(name="show", description="Show action")
      */
-    public function showAction()
+    public function showAction($id)
     {
         echo 'SHOW ACTION';
     }
