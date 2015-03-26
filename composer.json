@@ -16,7 +16,7 @@
         "phalcon/devtools": "1.3.x-dev",
         "phalcon/incubator": "1.3.*",
         "robmorgan/phinx": "*",
-        "vegas-cmf/core" : "1.0.*"
+        "vegas-cmf/core" : "1.1.*"
     },
     "require-dev": {
         "phpunit/phpunit": "4.0.*",
