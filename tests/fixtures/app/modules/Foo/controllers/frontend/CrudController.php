@@ -7,7 +7,7 @@ namespace Foo\Controllers\Frontend;
  * @ACL(name="mvc:foo:Frontend\Crud", description="Example crud controller")
  * @package Foo\Controllers\Frontend
  */
-class CrudController extends \Vegas\Mvc\Controller\Crud
+class CrudController extends \Vegas\Mvc\Controller\CrudAbstract
 {
     /**
      * @ACL(name="index", description="Index action")

@@ -6,7 +6,7 @@ namespace Foo\Controllers\Frontend;
  *
  * @package Foo\Controllers\Frontend
  */
-class SkipController extends \Vegas\Mvc\Controller\ControllerAbstract
+class SkipController extends \Vegas\Mvc\ControllerAbstract
 {
 
     public function indexAction()

@@ -10,7 +10,7 @@ use \Vegas\Mvc\View;
  * @ACL(name="mvc:foo:Frontend\Example", description="Example controller")
  * @package Foo\Controllers\Frontend
  */
-class ExampleController extends \Vegas\Mvc\Controller\ControllerAbstract
+class ExampleController extends \Vegas\Mvc\ControllerAbstract
 {
     public function initialize()
     {

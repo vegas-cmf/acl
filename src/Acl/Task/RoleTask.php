@@ -20,7 +20,7 @@ use Vegas\Security\Acl\Adapter\Exception\ResourceNotExistsException,
 use \Vegas\Security\Acl\Role as UserRole;
 
 
-class RoleTask extends \Vegas\Cli\Task
+class RoleTask extends \Vegas\Cli\TaskAbstract
 {
 
     /**
@@ -28,18 +28,18 @@ class RoleTask extends \Vegas\Cli\Task
      *
      * @var array
      */
-    private $predefinedResources  = array(
-        'all'   =>  array(
+    private $predefinedResources  = [
+        'all'   =>  [
             'description'   =>  'All privileges (for super admin)',
-            'accessList'    =>  array(
-                array(
+            'accessList'    =>  [
+                [
                     'name'  =>  Resource::ACCESS_WILDCARD,
                     'description' => 'All',
                     'inherit' => ''
-                )
-            )
-        )
-    );
+                ]
+            ]
+        ]
+    ];
 
     /**
      * Shorthand method to retrieve valid ACL instance from DI container.
@@ -56,7 +56,7 @@ class RoleTask extends \Vegas\Cli\Task
      *
      * @return mixed
      */
-    public function setOptions()
+    public function setupOptions()
     {
         $setupAction = new \Vegas\Cli\Task\Action('setup', 'Setup ACL basic roles');
         $this->addTaskAction($setupAction);
