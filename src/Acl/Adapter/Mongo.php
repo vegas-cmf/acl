@@ -159,7 +159,13 @@ class Mongo extends PhalconAdapter implements AdapterInterface
             throw new RoleDoesNotExistException($roleName);
         }
 
+        $accessListArray = [];
         $accessList = $this->getRoleAccesses($role['name']);
+
+        foreach ($accessList As $accessDocument) {
+            $accessListArray[] = $accessDocument;
+        }
+
         $roleObject = new Role($role['name'], $role['description']);
         $roleObject->setRemovable($role['removable']);
         $roleObject->setId($role['_id']);
